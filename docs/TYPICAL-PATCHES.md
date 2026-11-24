@@ -151,3 +151,41 @@ condensed, semiexpanded} (3,601 requests), old library against new.
 
 The Light → Thin moves for families with only Thin and Regular are what
 CSS specifies. They are listed so they can be judged, not hidden.
+
+## P4b: pick the family first when no requested family matched (src/fcmatch.c)
+
+Size: +62/−4 lines in `FcFontSetMatchInternal`. Also a new test,
+`test/test-family-first.json`, with 3 cases. Without the patch, the bold
+case fails.
+
+While scoring, the matcher now also keeps a second winner, computed with
+the style slots (STYLE, WIDTH, SLANT, WEIGHT) set to zero. That winner is
+the face whose *family* would win if style did not count. The second pass
+runs only when the overall winner differs from it and the request named no
+family the winner has (no family element, or both family scores
+"no match"). It then picks the best face, by the full score, among the
+faces whose first family name equals that family. When a requested family
+matched, nothing changes. FcFontSort is not changed (see below).
+Spec: CSS Fonts 4 §5 step 1 (start from a family) and §5.2 step 4 (width,
+style and weight are matched among *that family's* faces).
+
+Moved results in the harness:
+
+| request | before | after | why |
+|---|---|---|---|
+| sans-serif:lang=nqo:weight=bold | Noto Sans NKo Unjoined Bold | Noto Sans NKo Regular (emboldened) | Same family as the regular request. 90-synthetic.conf emboldens it. |
+| :lang=ban:weight=bold | Noto Sans Balinese Bold | Noto Serif Balinese Regular (emboldened) | same, and stays serif |
+| serif:lang=he:weight=black | Noto Serif Hebrew Black | Liberation Serif Bold | same family as the regular request; heaviest face of that family |
+| :lang=ur:weight=light | Noto Kufi Arabic Light | Noto Nastaliq Urdu Regular | same family as the regular request (Nastaliq has no Light) |
+| :lang=ks:weight=light | Noto Kufi Arabic Light | Noto Nastaliq Urdu Regular | same |
+
+Wider check: 338 languages × {none, sans-serif, serif, monospace} ×
+{regular, light, semibold, bold, black} (6,760 requests), P4 library against
+P4b. 25 moved. Every one of them is a request that P4 sent to a different
+family than the regular-weight request (ban, he, yi, ks, lah, nqo, pa-pk,
+ps-af, ps-pk, ur), and every one now stays in the regular request's family.
+After the patch, no request in the sweep changes family with weight.
+
+Not done: FcFontSort, the fallback list. Its tail still orders families
+that config does not list by style first. The sort would need a family-rank
+key ahead of the style slots, which is a bigger change. Left for later.

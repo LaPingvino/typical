@@ -1023,18 +1023,19 @@ FcFontSetMatchInternal (FcFontSet **sets,
                         FcPattern  *p,
                         FcResult   *result)
 {
-    double              score[PRI_END], bestscore[PRI_END];
+    double              score[PRI_END], bestscore[PRI_END], famscore[PRI_END];
     int                 f;
     FcFontSet          *s;
-    FcPattern          *best, *pat = NULL;
+    FcPattern          *best, *famBest, *pat = NULL;
     int                 i;
     int                 set;
     FcCompareData       data;
     const FcPatternElt *elt;
+    FcChar8            *family;
 
     for (i = 0; i < PRI_END; i++)
-	bestscore[i] = 0;
-    best = 0;
+	bestscore[i] = famscore[i] = 0;
+    best = famBest = 0;
     if (FcDebug() & FC_DBG_MATCH) {
 	printf ("Match ");
 	FcPatternPrint (p);
@@ -1073,7 +1074,64 @@ FcFontSetMatchInternal (FcFontSet **sets,
 		    break;
 		}
 	    }
+	    /* The same comparison with the style slots left out: the face
+	     * whose family would win if style did not count. */
+	    score[PRI_STYLE] = score[PRI_WIDTH] = score[PRI_SLANT] = score[PRI_WEIGHT] = 0;
+	    for (i = 0; i < PRI_END; i++) {
+		if (famBest && famscore[i] < score[i])
+		    break;
+		if (!famBest || score[i] < famscore[i]) {
+		    for (i = 0; i < PRI_END; i++)
+			famscore[i] = score[i];
+		    famBest = s->fonts[f];
+		    break;
+		}
+	    }
 	}
+    }
+
+    /*
+     * When the request named no family the winner has (no family at all,
+     * or both family scores are "no match"), nothing above keeps a family together: the style
+     * slots would pick the family, e.g. a bold request for a language
+     * served by "Foo" (regular only) would land on "Foo Unjoined Bold".
+     * CSS Fonts 4 section 5 picks the family first and section 5.2 step 4
+     * matches width, style and weight within it.  So pick the family as
+     * if style did not count, then the best face of that family.
+     */
+    if (best && famBest && best != famBest &&
+        (!FcPatternObjectFindElt (p, FC_FAMILY_OBJECT) ||
+         (bestscore[PRI_FAMILY_STRONG] >= 1e99 && bestscore[PRI_FAMILY_WEAK] >= 1e99)) &&
+        FcPatternObjectGetString (famBest, FC_FAMILY_OBJECT, 0, &family) == FcResultMatch) {
+	best = 0;
+	for (set = 0; set < nsets; set++) {
+	    s = sets[set];
+	    if (!s)
+		continue;
+	    for (f = 0; f < s->nfont; f++) {
+		FcChar8 *ff;
+
+		if (FcPatternObjectGetString (s->fonts[f], FC_FAMILY_OBJECT, 0, &ff) != FcResultMatch ||
+		    FcStrCmpIgnoreBlanksAndCase (ff, family) != 0)
+		    continue;
+		if (!FcCompare (p, s->fonts[f], score, result, &data)) {
+		    FcCompareDataClear (&data);
+		    return 0;
+		}
+		for (i = 0; i < PRI_END; i++) {
+		    if (best && bestscore[i] < score[i])
+			break;
+		    if (!best || score[i] < bestscore[i]) {
+			for (i = 0; i < PRI_END; i++)
+			    bestscore[i] = score[i];
+			best = s->fonts[f];
+			break;
+		    }
+		}
+	    }
+	}
+	if (FcDebug() & FC_DBG_MATCH)
+	    printf ("No requested family matched; family taken from %s\n", family);
     }
 
     FcCompareDataClear (&data);

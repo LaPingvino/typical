@@ -1,0 +1,24 @@
+{
+    "fonts": [
+        { "family": "Aaa", "style": "Regular", "weight": 80, "lang": "nqo", "fontversion": 2, "file": "/path/to/Aaa-Regular.ttf" },
+        { "family": "Aaa Alt", "style": "Regular", "weight": 80, "lang": "nqo", "fontversion": 1, "file": "/path/to/AaaAlt-Regular.ttf" },
+        { "family": "Aaa Alt", "style": "Bold", "weight": 200, "lang": "nqo", "fontversion": 1, "file": "/path/to/AaaAlt-Bold.ttf" }
+    ],
+    "tests": [
+        {
+            "method": "match",
+            "query": { "lang": "nqo" },
+            "result": { "family": "Aaa", "file": "/path/to/Aaa-Regular.ttf" }
+        },
+        {
+            "method": "match",
+            "query": { "lang": "nqo", "weight": 200 },
+            "result": { "family": "Aaa", "file": "/path/to/Aaa-Regular.ttf" }
+        },
+        {
+            "method": "match",
+            "query": { "family": "Aaa Alt", "lang": "nqo", "weight": 200 },
+            "result": { "family": "Aaa Alt", "file": "/path/to/AaaAlt-Bold.ttf" }
+        }
+    ]
+}
