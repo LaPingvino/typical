@@ -150,16 +150,16 @@ match xyzzy
 match sans-serif:lang=nqo
     Noto Sans NKo | Regular | weight=80 width=100 slant=0 | NotoSansNKo-Regular.ttf#0
 match sans-serif:lang=nqo:weight=bold
-    Noto Sans NKo Unjoined | Bold | weight=200 width=100 slant=0 | NotoSansNKoUnjoined-Bold.ttf#0
+    Noto Sans NKo | Regular | weight=200 width=100 slant=0 | NotoSansNKo-Regular.ttf#0
 match :lang=ban
     Noto Serif Balinese | Regular | weight=80 width=100 slant=0 | NotoSerifBalinese-Regular.ttf#0
 match :lang=ban:weight=bold
-    Noto Sans Balinese | Bold | weight=200 width=100 slant=0 | NotoSansBalinese-Bold.ttf#0
+    Noto Serif Balinese | Regular | weight=200 width=100 slant=0 | NotoSerifBalinese-Regular.ttf#0
 match serif:lang=he
     Liberation Serif | Regular | weight=80 width=100 slant=0 | LiberationSerif-Regular.ttf#0
 match serif:lang=he:weight=black
-    Noto Serif Hebrew | Black | weight=210 width=100 slant=0 | NotoSerifHebrew-Black.ttf#0
+    Liberation Serif | Bold | weight=200 width=100 slant=0 | LiberationSerif-Bold.ttf#0
 match :lang=ur:weight=light
-    Noto Kufi Arabic | Light | weight=50 width=100 slant=0 | NotoKufiArabic-Light.ttf#0
+    Noto Nastaliq Urdu | Regular | weight=80 width=100 slant=0 | NotoNastaliqUrdu-Regular.ttf#0
 match :lang=ks:weight=light
-    Noto Kufi Arabic | Light | weight=50 width=100 slant=0 | NotoKufiArabic-Light.ttf#0
+    Noto Nastaliq Urdu | Regular | weight=80 width=100 slant=0 | NotoNastaliqUrdu-Regular.ttf#0
