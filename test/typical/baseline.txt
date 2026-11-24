@@ -164,7 +164,7 @@ match :lang=ur:weight=light
 match :lang=ks:weight=light
     Noto Nastaliq Urdu | Regular | weight=80 width=100 slant=0 | NotoNastaliqUrdu-Regular.ttf#0
 match :lang=ug
-    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+    Noto Nastaliq Urdu | Regular | weight=80 width=100 slant=0 | NotoNastaliqUrdu-Regular.ttf#0
 match sans-serif:lang=ug
     DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
 match :lang=ar
