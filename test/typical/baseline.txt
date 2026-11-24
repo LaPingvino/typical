@@ -124,9 +124,9 @@ match Georgia
 match Impact
     Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
 match Menlo
-    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+    Noto Sans Mono | Regular | weight=80 width=100 slant=0 | NotoSansMono-Regular.ttf#0
 match Monaco
-    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+    Noto Sans Mono | Regular | weight=80 width=100 slant=0 | NotoSansMono-Regular.ttf#0
 match SF Mono
     Noto Sans Mono | Regular | weight=80 width=100 slant=0 | NotoSansMono-Regular.ttf#0
 match Consolas
@@ -138,7 +138,7 @@ match Garamond
 match Palatino
     P052 | Roman | weight=80 width=100 slant=0 | P052-Roman.otf#0
 match Comic Sans MS
-    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+    Z003 | Medium Italic | weight=100 width=100 slant=100 | Z003-MediumItalic.otf#0
 match Segoe UI
     Adwaita Sans | Regular | weight=80 width=100 slant=0 | AdwaitaSans-Regular.ttf#0
 match Roboto
