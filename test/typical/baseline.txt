@@ -1,32 +1,32 @@
 # typical baseline: 853 faces, font-set sha256 59f4e385fedb0999
 # mode: built library, system conf.d set with tree conf.d files, fresh cache
 match sans-serif:lang=ja
-    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans CJK JP | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#0
 match sans-serif:lang=ko
     Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
 match sans-serif:lang=zh-cn
-    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans CJK SC | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#2
 match sans-serif:lang=zh-tw
-    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans CJK TC | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#3
 match sans-serif:lang=zh-hk
-    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans CJK HK | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#4
 match serif:lang=ja
-    Noto Serif CJK KR | Regular | weight=80 width=100 slant=0 | NotoSerifCJK-Regular.ttc#1
+    Noto Serif CJK JP | Regular | weight=80 width=100 slant=0 | NotoSerifCJK-Regular.ttc#0
 match monospace:lang=ja
-    Noto Sans Mono CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#6
+    Noto Sans Mono CJK JP | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#5
 match :lang=ja
-    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans CJK JP | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#0
 match sans-serif:lang=ja:weight=bold
-    Noto Sans CJK KR | Bold | weight=200 width=100 slant=0 | NotoSansCJK-Bold.ttc#1
+    Noto Sans CJK JP | Bold | weight=200 width=100 slant=0 | NotoSansCJK-Bold.ttc#0
 sort 6 sans-serif:lang=ja
-    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans CJK JP | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#0
     Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
     DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
     DejaVu Sans | Bold | weight=200 width=100 slant=0 | DejaVuSans-Bold.ttf#0
     DejaVu Sans | Oblique | weight=80 width=100 slant=110 | DejaVuSans-Oblique.ttf#0
     DejaVu Sans | Bold Oblique | weight=200 width=100 slant=110 | DejaVuSans-BoldOblique.ttf#0
 sort 6 sans-serif:lang=zh-cn
-    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans CJK SC | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#2
     Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
     DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
     DejaVu Sans | Bold | weight=200 width=100 slant=0 | DejaVuSans-Bold.ttf#0
