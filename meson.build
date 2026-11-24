@@ -34,7 +34,7 @@ cacheversion = 12
 # changes the on-disk format, or adds an object that is NOT reconstructable
 # that way, MUST also raise cachemincompat.
 cachemincompat = 9
-cachesnapversion = 0
+cachesnapversion = 1
 if cachesnapversion > 0
   nextcacheversion = cacheversion + 1
 else
