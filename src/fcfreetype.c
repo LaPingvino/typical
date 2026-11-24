@@ -48,7 +48,6 @@
 #include FT_MULTIPLE_MASTERS_H
 
 #include "fcfoundry.h"
-#include "fcotlang.h"
 #include "ftglue.h"
 
 typedef struct {
@@ -3104,15 +3103,6 @@ bail:
     return ret;
 }
 
-static int
-FcOtLangCompare (const void *key, const void *elt)
-{
-    FcChar32 tag = *(const FcChar32 *)key;
-    FcChar32 etag = ((const FcOtLang *)elt)->tag;
-
-    return tag < etag ? -1 : tag > etag;
-}
-
 /*
  * Collect, from one GSUB or GPOS table, the tags of the language systems
  * (not the default one) whose required or listed features include 'locl'.
@@ -3198,9 +3188,9 @@ FcCompareChar32 (const void *a, const void *b)
 static FcBool
 FcFontAddOpenTypeLangs (FcPattern *pat, FT_Face face)
 {
-    FcChar32    tags[256];
-    const char *added[256];
-    int         ntags = 0, nadded = 0, i, j;
+    FcChar32       tags[256];
+    const FcChar8 *added[256];
+    int            ntags = 0, nadded = 0, i, j;
 
     if (!FcFontAddMetaLangs (pat, face))
 	return FcFalse;
@@ -3209,20 +3199,16 @@ FcFontAddOpenTypeLangs (FcPattern *pat, FT_Face face)
     FcCollectLoclLangSys (face, TTAG_GPOS, tags, &ntags, 256);
     qsort (tags, ntags, sizeof (tags[0]), FcCompareChar32);
     for (i = 0; i < ntags; i++) {
-	const FcOtLang *e = bsearch (&tags[i], fcOtLangs,
-	                             sizeof (fcOtLangs) / sizeof (fcOtLangs[0]),
-	                             sizeof (fcOtLangs[0]), FcOtLangCompare);
-	const char     *lang;
+	const FcChar8 *lang = FcLangFromOpenTypeTag (tags[i]);
 
-	if (!e)
+	if (!lang)
 	    continue; /* not a registered language system tag */
-	lang = e->lang;
-	for (j = 0; j < nadded && strcmp (added[j], lang); j++)
+	for (j = 0; j < nadded && strcmp ((const char *)added[j], (const char *)lang); j++)
 	    ;
 	if (j < nadded)
 	    continue;
 	added[nadded++] = lang;
-	if (!FcPatternObjectAddString (pat, FC_LOCL_LANG_OBJECT, (const FcChar8 *)lang))
+	if (!FcPatternObjectAddString (pat, FC_LOCL_LANG_OBJECT, lang))
 	    return FcFalse;
     }
     return FcTrue;

@@ -63,13 +63,15 @@ def main(path):
         line = line.strip().lstrip('*').rstrip()
         out.write(' *' + (line if line.startswith(' ') or not line else ' ' + line) + '\n')
     out.write(' *\n * Do not edit by hand.\n */\n\n')
+    out.write('#define FC_OT_TAG(a, b, c, d) \\\n'
+              '    ((FcChar32)(a) << 24 | (FcChar32)(b) << 16 | (FcChar32)(c) << 8 | (FcChar32)(d))\n\n')
     out.write('/* OpenType language system tag -> BCP 47 language, sorted by tag. */\n')
     out.write('typedef struct {\n    FcChar32 tag;\n    char     lang[12];\n} FcOtLang;\n\nstatic const FcOtLang fcOtLangs[] = {\n')
     width = max(len(v) for v in table.values()) + 2
     for ot in sorted(table):
         lang = table[ot].lower()
         assert len(lang) < 12, lang
-        out.write("    { FT_MAKE_TAG ('%s', '%s', '%s', '%s'), %-*s },\n" % (*ot, width, '"%s"' % lang))
+        out.write("    { FC_OT_TAG ('%s', '%s', '%s', '%s'), %-*s },\n" % (*ot, width, '"%s"' % lang))
     out.write('};\n')
 
 

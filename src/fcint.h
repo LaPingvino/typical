@@ -1422,6 +1422,9 @@ FcPrivate FcLangSet *
 FcLangSetFromCharSet (const FcCharSet *charset,
                       const FcChar8   *exclusiveLang);
 
+FcPrivate const FcChar8 *
+FcLangFromOpenTypeTag (FcChar32 tag);
+
 FcPrivate FcLangResult
 FcLangCompare (const FcChar8 *s1, const FcChar8 *s2);
 

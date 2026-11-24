@@ -27,6 +27,7 @@
 #if ENABLE_FREETYPE
 #include "fcftint.h"
 #endif
+#include "fcotlang.h"
 
 /* Objects MT-safe for readonly access. */
 
@@ -1055,6 +1056,30 @@ FcLangIsExclusiveFromOs2 (unsigned long os2ulUnicodeRange1, unsigned long os2ulU
 	}
     }
     return exclusiveLang;
+}
+
+static int
+FcOtLangCompare (const void *key, const void *elt)
+{
+    FcChar32 tag = *(const FcChar32 *)key;
+    FcChar32 etag = ((const FcOtLang *)elt)->tag;
+
+    return tag < etag ? -1 : tag > etag;
+}
+
+/*
+ * Map an OpenType language system tag (e.g. 'JAN ', 'ZHS ') to a BCP 47
+ * language as fontconfig names it ("ja", "zh-cn").  Returns NULL for tags
+ * that are not in the OpenType language system registry.
+ */
+const FcChar8 *
+FcLangFromOpenTypeTag (FcChar32 tag)
+{
+    const FcOtLang *e = bsearch (&tag, fcOtLangs,
+                                 sizeof (fcOtLangs) / sizeof (fcOtLangs[0]),
+                                 sizeof (fcOtLangs[0]), FcOtLangCompare);
+
+    return e ? (const FcChar8 *)e->lang : NULL;
 }
 
 #define __fclang__
