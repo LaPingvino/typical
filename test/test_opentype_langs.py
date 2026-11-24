@@ -15,6 +15,14 @@ def fctest():
     return FcTest()
 
 
+@pytest.fixture(params=[False, True], ids=['freetype', 'fontations'])
+def scanner(fctest, request):
+    # Without a fontations build, FC_FONTATIONS is ignored and both runs
+    # use FreeType.
+    fctest.with_fontations = request.param
+    return fctest
+
+
 def query(fctest, fmt):
     font = Path(fctest.srcdir) / 'test' / 'opentype-langs.ttf'
     for ret, stdout, stderr in fctest.run_query(['-f', fmt, str(font)]):
@@ -22,25 +30,39 @@ def query(fctest, fmt):
         return stdout
 
 
-def test_panose(fctest):
+def test_panose(scanner):
+    fctest = scanner
     assert query(fctest, '%{panose}') == '2 11 5 2 4 5 4 2 2 4'
 
 
-def test_meta_langs(fctest):
+def test_meta_langs(scanner):
+    fctest = scanner
     assert query(fctest, '%{designlang}') == 'en-Latn,Hans'
     # Empty and malformed entries are dropped.
     assert query(fctest, '%{supportedlang}') == 'en,ja-Jpan,zh-Hant'
 
 
-def test_locl_langs(fctest):
+def test_locl_langs(scanner):
+    fctest = scanner
     # NLD and the CJK tags carry 'locl'; TRK has only 'liga', QQQ is not a
     # registered language system tag, and JAN under both hani and kana is
     # recorded once.
     assert query(fctest, '%{locllang}') == 'ja,ko,nl,zh-hk,zh-cn,zh-tw'
 
 
-def test_no_data(fctest):
+def test_no_data(scanner):
+    fctest = scanner
     font = Path(fctest.srcdir) / 'test' / 'no_family_name.ttf'
     for ret, stdout, stderr in fctest.run_query(['-f', '%{designlang}|%{supportedlang}|%{locllang}', str(font)]):
         assert ret == 0, stderr
         assert stdout == '||'
+
+
+def test_scanners_agree(fctest):
+    font = str(Path(fctest.srcdir) / 'test' / 'opentype-langs.ttf')
+    for ret, freetype, stderr in fctest.run_query([font]):
+        assert ret == 0, stderr
+    fctest.with_fontations = True
+    for ret, fontations, stderr in fctest.run_query([font]):
+        assert ret == 0, stderr
+    assert freetype == fontations

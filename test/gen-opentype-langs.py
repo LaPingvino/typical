@@ -67,7 +67,9 @@ def main(out):
     fb.setupGlyf({g: box() for g in glyphs})
     fb.setupHorizontalMetrics({g: (600, 100) for g in glyphs})
     fb.setupHorizontalHeader(ascent=800, descent=-200)
-    fb.setupNameTable({'familyName': 'OpenType Langs Test', 'styleName': 'Regular'})
+    fb.setupNameTable({'familyName': 'OpenType Langs Test', 'styleName': 'Regular',
+                      'fullName': 'OpenType Langs Test Regular',
+                      'psName': 'OpenTypeLangsTest-Regular'})
     fb.setupOS2(sTypoAscender=800, sTypoDescender=-200, usWinAscent=800, usWinDescent=200,
                 usWeightClass=400, usWidthClass=5)
     panose = fb.font['OS/2'].panose
