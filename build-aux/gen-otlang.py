@@ -11,9 +11,11 @@
 # generated from the OpenType language system tag registry and the IANA
 # language subtag registry: the explicit choice for ambiguous tags, else
 # the first two-letter language for the tag, else the first three-letter
-# one.  The Chinese tags are replaced by the names fontconfig's own
-# orthographies use (zh-cn, zh-tw, zh-hk, zh-mo), and every tag is
-# lowercased like the rest of fontconfig's languages.
+# one.  Entries HarfBuzz leaves commented out because its fallback covers
+# them (tag == uppercased ISO 639-3 code) are included.  The Chinese tags
+# are replaced by the names fontconfig's own orthographies use (zh-cn,
+# zh-tw, zh-hk, zh-mo), and every tag is lowercased like the rest of
+# fontconfig's languages.
 
 import re
 import sys
@@ -30,8 +32,10 @@ TAG = r"HB_TAG\('(.)','(.)','(.)','(.)'\)"
 
 def main(path):
     src = open(path, encoding='utf-8').read()
-    # Drop commented-out entries.
-    src = re.sub(r'/\*\{.*?\}\*/', '', src)
+    # HarfBuzz comments out the entries where the OpenType tag is just the
+    # uppercased ISO 639-3 code (/*{HB_TAG('m','o','h',' '), ...},*/), since
+    # it derives those by fallback.  They are real registry entries, so the
+    # regex below reads them too: they are kept on purpose.
 
     m = re.search(r'/\* == Start of generated table == \*/\s*/\*(.*?)\*/', src, re.S)
     header = m.group(1).strip() if m else ''

@@ -48,7 +48,7 @@ Why strings and not a langset: `dlng`/`slng` hold ScriptLangTags, many of them s
 
 ### OpenType tag → BCP 47
 
-`src/fcotlang.h` holds a sorted table of 675 entries, searched with `bsearch`. `build-aux/gen-otlang.py` generates it from HarfBuzz's `hb-ot-tag-table.hh` (here HarfBuzz 11.2.1), which HarfBuzz in turn generates from the OpenType language-system registry and the IANA subtag registry. The rule matches `hb_ot_tag_to_language`: the explicit choice for ambiguous tags, else the first two-letter language, else the first three-letter one. The table was cross-checked against the installed libharfbuzz 15.2: it differs only in HarfBuzz's `-x-hbot-` round-trip suffix, in `DUJ` (newer registry), and in the overrides below.
+`src/fcotlang.h` holds a sorted table of 675 entries, searched with `bsearch`. `build-aux/gen-otlang.py` generates it from HarfBuzz's `hb-ot-tag-table.hh` (here HarfBuzz 11.2.1), which HarfBuzz in turn generates from the OpenType language-system registry and the IANA subtag registry. The rule matches `hb_ot_tag_to_language`: the explicit choice for ambiguous tags, else the first two-letter language, else the first three-letter one. About 230 entries (`MOH` → `moh`, `SAT` → `sat`, …) are ones that HarfBuzz leaves commented out in its table, because there the tag is just the uppercased ISO 639-3 code and its fallback covers them. They are real registry entries, and local fonts use them (`SAT`, `RHG`, `JCT`), so they are included on purpose. The table was cross-checked against the installed libharfbuzz 15.2 (`hb_ot_tag_to_language` on every tag). It differs only on those fallback entries, where HarfBuzz appends a private `-x-hbot-…` suffix to the same language; on `DUJ` (a newer registry); and on the overrides below.
 
 - `JAN` → `ja`, `KOR` → `ko`.
 - Overrides to fontconfig's own orthography names: `ZHS` → `zh-cn`, `ZHT` → `zh-tw`, `ZHH` → `zh-hk`, `ZHTM` → `zh-mo`. HarfBuzz would give `zh-Hans`/`zh-Hant`.
@@ -62,13 +62,20 @@ OS/2 describes the default instance, so every named instance of a variable font 
 
 ### Parsing
 
-`meta`, `GSUB` and `GPOS` are loaded whole with `FT_Load_Sfnt_Table`. Every count and offset is bounds-checked against the table length, so a malformed table just yields nothing. Noto Sans CJK's GSUB is 173 KB. Timing on the 10-face TTC showed no measurable difference.
+`meta`, `GSUB` and `GPOS` are loaded whole with `FT_Load_Sfnt_Table`. Every count and offset is bounds-checked against the table length, so a malformed table just yields nothing. Noto Sans CJK's GSUB is 173 KB. A full `fc-cache -f` over /usr/share/fonts (743 files) took 3.7–4.4 s with and without the patch, within run-to-run noise.
 
 ## Cache
 
 The cache format does not change: the objects are appended to `fcobjs.h`, and the 1024-slot `FC_EXT_OBJ_INDEX` gap keeps older readers safe. But a cache written by older fontconfig lacks the new objects, so the dev snapshot must not share its cache name. This branch therefore does what upstream does in development (commit 1eb9286f): `cachesnapversion` goes 0 → 1, so the files become `.cache-13~snap1`. At release, `new-version.sh` turns that into `cacheversion = 13`.
 
-`cachemincompat` stays at 9, and that is an open decision. The `meson.build` comment says it MUST be raised when an object cannot be rebuilt from old caches, and these four cannot. But raising it to 12 or more makes `test_genericfamily_backfill_contract` fail on purpose and forces the genericfamily backfill out of `fcmatch.c`. That is a matcher change, so it is not done here. Until it is decided, a probed older cache (`.cache-9`…`-11`) yields fonts with no `panose`/`*lang`. That is the same as a font without those tables, so the matcher must treat absence as "unknown" anyway. Also, at release `new-version.sh` sets `cachemincompat` to the old cache version (12), which would let 2.18's `.cache-12` be probed. The release that ships these objects should set it to 13 by hand.
+`cachemincompat` stays at 9, and that is **an open decision for Joop**. The `meson.build` comment says it MUST be raised when an object cannot be rebuilt from old caches, and these four cannot. But raising it to 11 or more makes `test_genericfamily_backfill_contract` (CI cross-version job) fail on purpose: the test demands that the genericfamily backfill in `fcmatch.c` be deleted, because it becomes dead code. That is a matcher-side edit, so it is not done here.
+
+What staying at 9 costs, measured with a temporary cachedir holding only the test font:
+
+- The patched `fc-cache` writes `.cache-13~snap1`, plus `.cache-9/-10/-11` symlinks to it. `fc-list` from that cache shows all four objects.
+- If 2.18's `fc-cache` wrote the cachedir first (`.cache-12` + `.cache-9…11` symlinks), the patched reader probes `.cache-11`, accepts it, and lists the font **without** `panose`/`designlang`/`supportedlang`/`locllang`. It does not rescan. The new objects stay silently missing until the patched `fc-cache` runs. Any machine whose caches come from the system fontconfig is in this state.
+
+So the matcher must treat absence as "unknown". It has to anyway, for fonts without these tables. But before upstreaming, `cachemincompat` should be raised and the backfill removed in the same change. Note also that at release, `new-version.sh` sets `cachemincompat` to the previous cache version (12), which would still let 2.18's `.cache-12` be probed. The release that ships these objects needs 13.
 
 ## Fontations path: gap
 
