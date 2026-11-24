@@ -61,6 +61,35 @@
         "genericfamily": ["monospace", "sans-serif"],
         "family": ["monospace"]
       }
+    },
+    {
+      "method": "pattern",
+      "query": {
+        "family": "Menlo"
+      },
+      "result": {
+        "genericfamily": "monospace",
+        "family": ["Menlo", "monospace"]
+      }
+    },
+    {
+      "method": "pattern",
+      "query": {
+        "family": "Georgia"
+      },
+      "result": {
+        "genericfamily": "serif",
+        "family": ["Georgia", "serif"]
+      }
+    },
+    {
+      "method": "pattern",
+      "query": {
+        "family": "NoSuchFamilyXyzzy"
+      },
+      "result": {
+        "family": ["NoSuchFamilyXyzzy", "sans-serif"]
+      }
     }
   ]
 }

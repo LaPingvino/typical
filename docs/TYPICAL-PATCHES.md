@@ -64,3 +64,32 @@ Moved results:
 | request | before | after | why |
 |---|---|---|---|
 | Impact | FontAwesome | Noto Sans | No installed fantasy face covers Latin, so the request falls through to the sans-serif default. That is the intended outcome: a text face instead of icons. |
+
+## P3: classify the requested family with the curated table (src/fccfg.c)
+
+Size: +21 lines of C in `FcConfigSubstituteWithPat`, plus 3 cases in
+`test/test-49-sansserif.json`. Without the patch, the Menlo and Georgia
+cases fail.
+
+When a pattern-kind substitution starts and the request has no
+`genericfamily`, the patch classifies its family list with
+`FcGenericFamilyGetValues`, the same curated data the scanner applies to
+fonts. It stops at the first family it can classify and adds the class as
+a weak value. Config rules still run afterwards. An unknown name adds
+nothing. `49-sansserif.conf` then appends the matching generic name, as it
+already does for classes set by config. An installed family with that name
+still wins at slot 9 (strong family) before slot 10 (generic) is read.
+Spec: CSS Fonts 4 §2.1.5 (reasonable default choices for generic families).
+The data is the library's own curated list.
+
+Moved results:
+
+| request | before | after | why |
+|---|---|---|---|
+| Menlo | Noto Sans | Noto Sans Mono | Menlo is monospace in `monospace.txt`. Before, the request had no class and fell through to sans-serif. |
+| Monaco | Noto Sans | Noto Sans Mono | same |
+| Comic Sans MS | Noto Sans | Z003 Medium Italic | The config (`45-latin.conf:270`) and the curated list (`cursive.txt`) both say cursive. Before, the "sans" substring rule in `48-guessfamily.conf` set sans-serif first and hid the config's own class. Z003 is the only cursive face installed. |
+
+Unchanged as intended: Futura, Helvetica Neue, Roboto and Inter stay on
+Noto Sans, and Georgia, Garamond and Cambria stay on Noto Serif (same
+class as before). Consolas and SF Mono were already monospace.

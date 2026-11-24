@@ -2028,6 +2028,27 @@ FcConfigSubstituteWithPat (FcConfig   *config,
 
     s = config->subst[kind];
     if (kind == FcMatchPattern) {
+	/* Classify the requested family with the same curated data the
+	 * scanner applies to fonts, so a request for an absent family
+	 * (e.g. "Menlo") keeps its generic class instead of falling to the
+	 * catch-all sans-serif.  Config rules still run afterwards and can
+	 * override it; nothing is added when the name is unknown.
+	 */
+	if (!FcPatternObjectFindElt (p, FC_GENERIC_FAMILY_OBJECT)) {
+	    FcPatternElt *fe = FcPatternObjectFindElt (p, FC_FAMILY_OBJECT);
+
+	    if (fe) {
+		FcGenericFamilyValues g = FcGenericFamilyGetValues (FcPatternEltValues (fe));
+
+		if (g.values[0] != FC_FAMILY_UNKNOWN) {
+		    for (i = 0; i < g.n; i++) {
+			v.type = FcTypeInteger;
+			v.u.i = g.values[i];
+			FcPatternObjectAddWithBinding (p, FC_GENERIC_FAMILY_OBJECT, v, FcValueBindingWeak, FcTrue);
+		    }
+		}
+	    }
+	}
 	strs = FcConfigGetDefaultLangs (config);
 	if (strs) {
 	    FcStrList *l = FcStrListCreate (strs);
