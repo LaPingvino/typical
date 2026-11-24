@@ -39,3 +39,28 @@ Moved results (all intended: each CJK request now gets its own region's face):
 
 Unchanged as intended: `sans-serif:lang=ko` (KR) and
 `sans-serif:lang=ko:weight=bold` (KR Bold). No non-CJK request moved.
+
+## P2: remove icon and music-notation fonts from the fantasy list (fc-genericfamily/fantasy.txt)
+
+Size: −12 lines of data, no C.
+
+The patch removes Bravura, CaladingsCLM, FontAwesome, FontAwesome 7 Brands,
+FontAwesome 7 Free, Foundation Icons, Leland, Material Icons, Petaluma,
+entypo, mnmlicons and Finale Broadway. These are pictograph, dingbat or
+SMuFL music-notation fonts, not fantasy *text* faces. Their text companions
+(PetalumaScript, Finale Broadway Text) stay. Faces from the removed families
+are now classified FC_FAMILY_UNKNOWN. Because GENERIC_FAMILY (slot 10)
+ranks above LANG (slot 12), a font classified "fantasy" with no Latin glyphs
+used to beat every text font for any fantasy request.
+Spec: CSS Fonts 4 §5: a face is used only for characters it can render, so
+a pictograph font is never a stand-in for a text family.
+
+The other way to fix this was to give no generic class to faces with an
+empty langset. It was rejected because 85 installed faces with an empty
+langset are real text fonts for scripts that have no orthography file.
+
+Moved results:
+
+| request | before | after | why |
+|---|---|---|---|
+| Impact | FontAwesome | Noto Sans | No installed fantasy face covers Latin, so the request falls through to the sans-serif default. That is the intended outcome: a text face instead of icons. |
