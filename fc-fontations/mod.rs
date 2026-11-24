@@ -31,6 +31,7 @@ mod instance_enumerate;
 mod lang;
 mod name_records;
 mod names;
+mod opentype_langs;
 mod pattern_bindings;
 mod postscript;
 mod style_consts;
@@ -357,6 +358,8 @@ fn build_patterns_for_font(
             capabilities.into(),
         ));
     };
+
+    opentype_langs::add_opentype_langs(font, &mut pattern);
 
     // CharSet and Langset.
     if let Some(charset) = charset::make_charset(font) {
