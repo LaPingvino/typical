@@ -361,5 +361,7 @@ loss explained for both runners-up, and the table rows.
 Found with it: the harness's requests are written `sans-serif:…`.
 `FcNameParse` reads the `-` as the start of a size list, so the request's
 strong family is `"sans"`, not `"sans-serif"`. `48-guessfamily.conf` then
-adds sans-serif, so the results are the same either way. The family-name
-form that keeps the hyphen is `:family=sans-serif`.
+adds sans-serif. Measured: 43 `sans-serif:…` requests (the harness's
+plus ja, ko, zh-cn, zh-tw, ar, he, hi, th, ur, nqo and ban at regular,
+bold and light) give the same face as `:family=sans-serif:…`. That is
+the form that keeps the hyphen.
