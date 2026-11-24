@@ -122,7 +122,7 @@ match Courier New
 match Georgia
     Noto Serif | Regular | weight=80 width=100 slant=0 | NotoSerif-Regular.ttf#0
 match Impact
-    FontAwesome | Regular | weight=80 width=100 slant=0 | fontawesome-regular.ttf#0
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
 match Menlo
     Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
 match Monaco
