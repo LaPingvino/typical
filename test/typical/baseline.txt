@@ -45,11 +45,11 @@ match sans-serif:lang=bn
 match Noto Sans:weight=semibold
     Noto Sans | Bold | weight=200 width=100 slant=0 | NotoSans-Bold.ttf#0
 match Noto Sans:weight=extralight
-    Noto Sans | Light | weight=50 width=100 slant=0 | NotoSans-Light.ttf#0
+    Noto Sans | Thin | weight=0 width=100 slant=0 | NotoSans-Thin.ttf#0
 match sans-serif:weight=semibold
     Noto Sans | Bold | weight=200 width=100 slant=0 | NotoSans-Bold.ttf#0
 match sans-serif:weight=extralight
-    Noto Sans | Light | weight=50 width=100 slant=0 | NotoSans-Light.ttf#0
+    Noto Sans | Thin | weight=0 width=100 slant=0 | NotoSans-Thin.ttf#0
 match sans-serif:weight=black
     Noto Sans | Black | weight=210 width=100 slant=0 | NotoSans-Black.ttf#0
 match serif:weight=semibold
@@ -86,13 +86,13 @@ match Adwaita Sans:weight=150:variable=true
 match DejaVu Sans:width=condensed
     DejaVu Sans | Condensed | weight=80 width=87 slant=0 | DejaVuSansCondensed.ttf#0
 match DejaVu Sans:width=condensed:weight=light
-    DejaVu Sans | ExtraLight | weight=40 width=100 slant=0 | DejaVuSans-ExtraLight.ttf#0
+    DejaVu Sans | Condensed | weight=80 width=87 slant=0 | DejaVuSansCondensed.ttf#0
 match DejaVu Sans:width=condensed:weight=semibold
     DejaVu Sans | Condensed Bold | weight=200 width=87 slant=0 | DejaVuSansCondensed-Bold.ttf#0
 match DejaVu Serif:width=condensed:weight=light
     DejaVu Serif | Condensed | weight=80 width=87 slant=0 | DejaVuSerifCondensed.ttf#0
 match Noto Sans Sinhala:width=condensed
-    Noto Sans Sinhala | Regular | weight=80 width=100 slant=0 | NotoSansSinhala-Regular.ttf#0
+    Noto Sans Sinhala | Thin Condensed | weight=0 width=63 slant=0 | NotoSansSinhala-ThinCondensed.ttf#0
 match Nimbus Sans:width=condensed
     Nimbus Sans | Regular | weight=80 width=100 slant=0 | NimbusSans-Regular.otf#0
 match Helvetica:width=condensed
