@@ -22,14 +22,21 @@ Summary:
   reads only usWeightClass, usWidthClass, the optical size range, the
   code-page bits (as a narrow exclusion), name IDs 1/2/16/17/21/22, fvar, and
   the GSUB/GPOS script tags (stored but never matched). It ignores `meta`
-  (dlng/slng), `STAT`, PANOSE, sFamilyClass, the GSUB/GPOS language systems
-  and the language tags of name records.
+  (dlng/slng), `STAT`, PANOSE, sFamilyClass and the GSUB/GPOS language
+  systems. It reads the language tags of name records, but only to choose
+  which localized name to *display*. It drops a tag whenever the localized
+  string equals the English one.
 * The fonts installed here would not fix CJK by themselves. The Noto CJK
   2.004 faces have no `meta` table, identical GSUB language systems, and
   near-identical code-page bits. The only thing that tells the JP face from
   the KR face is the language ID on their name records. The fix for CJK
   belongs mainly in config, and CSS Fonts 4 supports that: per CSS, choosing a
   font per language for a generic family is the UA's job.
+* When config names no font for a language, nothing in the score keeps a
+  family together. The requested weight picks the *family*, and otherwise
+  the font revision number does. `sans-serif:lang=nqo` gives Noto Sans NKo,
+  but with `:weight=bold` it gives Noto Sans NKo Unjoined. CSS picks the
+  family first.
 
 ---
 
@@ -49,11 +56,17 @@ A client (here `fc-match`, `fc-match/fc-match.c:187-212`) does three things:
    * Aliases expand generic names. `sans-serif` turns into a list of about
      110 family names (from `45-latin.conf`, `60-latin.conf`,
      `65-nonlatin.conf`, …), all bound **weak**, around the original strong
-     `sans-serif`. Aliases with `<default>` also tag the request with a
-     `genericfamily` value (the alias sugar in `src/fcxml.c:2040-2180`).
-     `48-guessfamily.conf` and `49-sansserif.conf` then fill in a generic
-     from substrings ("mono", "sans", "serif"). As a last resort they append
-     `sans-serif`.
+     `sans-serif`. The *request's* `genericfamily` comes from
+     `48-guessfamily.conf`. When a family name contains "mono", "sans",
+     "serif", "fantasy" and so on, it sets the matching class if none is set
+     yet. Generic names the request picked up from aliases count too: Impact
+     gains `fantasy` from `45-latin.conf:262-265`, and `48-guessfamily.conf`
+     then tags it `genericfamily=fantasy`. If the request still has no
+     generic, `49-sansserif.conf` appends one from it, or `sans-serif` as a
+     last resort. (The `<alias>` sugar in `src/fcxml.c:2040-2195` adds
+     *scan* rules only. Those classify *fonts* listed under a generic in
+     config, which is why a config-listed font such as Noto Sans CJK KR can
+     carry two classes.)
 2. **`FcConfigSetDefaultSubstitute`** (`src/fcdefault.c:287`) fills in
    whatever is still missing: weight=regular, slant=roman, width=normal
    (`:297-304`), size and pixel size, `familylang`/`stylelang` = locale plus
@@ -115,7 +128,7 @@ ranks after language.
 
 `GENERIC_FAMILY` (slot 10) arrived in 2.18.0 (`21f65e1c`, issue 457). It first
 sat *before* strong family and later moved after it. Fonts get the value at
-scan time (§2.6). Old caches get it backfilled by `FcCompareGenericFamilyBackfill`
+scan time (see the genericfamily row of the table in §2). Old caches get it backfilled by `FcCompareGenericFamilyBackfill`
 (`src/fcmatch.c:634-655`, `:715-722`).
 
 ### 1.3 How language is compared
@@ -208,6 +221,7 @@ section only documents what is there now.
 | OS/2 usWeightClass | yes | `fcfreetype.c:1764-1769` → `FcWeightFromOpenTypeDouble` (`fcweight.c:28-75`); `attributes.rs:96` | `weight` (fontconfig scale) | slot 21 |
 | OS/2 usWidthClass | yes | `fcfreetype.c:1771-1785`; `attributes.rs:108` | `width` (percent) | slot 22 |
 | OS/2 usLower/UpperOpticalPointSize | yes (v5) | `fcfreetype.c:1802-1822` | `size` range | slot 17 |
+| OS/2 achVendID | yes | `fcfreetype.c:1359-1362`; `foundries.rs` | `foundry` | slot 7, only if the request names one |
 | OS/2 ulCodePageRange1/2 | only the 4 CJK bits, as an exclusion | `fclang.c:1029`; `lang.rs:31-52` | narrows `lang` | indirectly (slot 12) |
 | OS/2 fsSelection | **not directly** in C. Italic and bold come from the style *name* first (`FcContainsSlant`/`FcContainsWeight`, `fcfreetype.c:1897-1918`), then FreeType's `style_flags` (`:1923-1937`). Fontations uses skrifa's `Attributes` (`attributes.rs:144-200`) | | `slant`, `weight` | slot 20/21 |
 | fsSelection bit 8 WWS, bit 9 OBLIQUE | no | | | |
@@ -304,27 +318,56 @@ sans-serif:weight=extralight             -> Noto Sans Light   (CSS picks Thin)
   Above 500 the compressed top of the scale turns Bold/ExtraBold/Black into
   near-ties.
 
-*Bold from another family.* An exhaustive run on this machine (277
-families × light/semibold/bold/black, request `Family:weight=X`) found **no
-direct request that leaves its family**. The only exceptions were icon fonts
-that config rejects. Family (slot 9 or 13) always precedes weight, which is
-what CSS requires too (§5 step 1, §5.2 step 4 is per family). The ways a
-weight request *does* end up in another family are:
+*Bold from another family.* There are two sweeps on this machine.
+
+1. **Named family:** 277 families × light/semibold/bold/black, request
+   `Family:weight=X`. No request left its family. The only exceptions were
+   icon fonts that config rejects. A strong family (slot 9) always
+   precedes weight, as CSS requires (§5 step 1; §5.2 step 4 works inside
+   one family).
+2. **Language, with or without a generic:** 338 languages ×
+   {none, sans-serif, serif, monospace} × the same four weights. Any change
+   of family against the regular-weight result was flagged. This found
+   the case:
+
+```
+sans-serif:lang=nqo              -> Noto Sans NKo           Regular
+sans-serif:lang=nqo:weight=bold  -> Noto Sans NKo Unjoined  Bold     (another family)
+:lang=ban                        -> Noto Serif Balinese     Regular
+:lang=ban:weight=bold            -> Noto Sans Balinese      Bold     (another family, and sans)
+serif:lang=he                    -> Liberation Serif        Regular
+serif:lang=he:weight=black       -> Noto Serif Hebrew       Black
+:lang=ur                         -> Noto Nastaliq Urdu      Regular
+:lang=ur:weight=light            -> Noto Kufi Arabic        Light    (Nastaliq -> Kufi; also ks, pa-pk, ps)
+```
+
+24 of the 5,408 requests in the sweep changed family (ban, he, yi, ks, lah, nqo, pa-pk, ps, ur). Representative ones are in
+`requests.txt` under `[lang-weight]`.
+
+**Root cause.** Every font that covers these languages is missing from all
+alias lists, so the weak-family slot 13 is 1e99 for all of them. The
+`Best score` lines show `… 1e+99 0 0 0 1e+99 …` for each winner above.
+After slot 13, nothing in the vector knows about families. The first slot
+that still differs decides, whichever it is. With a weight request, that
+slot is WEIGHT (21), and the heaviest family wins. With a regular request,
+it is FONTVERSION (29), the last tie-breaker: the font with the highest
+`head.fontRevision` wins. So which *family* serves a language that config
+does not mention depends on which family happens to have the requested
+weight, or else the highest revision number. Families are never kept
+together.
+*What CSS does instead:* it picks the family first (§5 step 1), and narrows
+weight only inside it (§5.2 step 4). For a generic, the UA picks one
+family per language (§5.2 step 2), not one face per weight.
+
+Other ways a weight request crosses families:
 
 * **Families split by name.** A face without a shared name ID 16/21 is a
   different family to fontconfig, since family identity is just
   "any of IDs 21/16/1". Nimbus Sans Narrow is the case installed here (see
-  3.3). A bold face named only "Foo Bold" (ID 1) would likewise never serve
-  `Foo:bold`. 90-synthetic.conf would embolden Foo Regular instead.
+  3.3).
 * **Fallback.** In `FcFontSort`, characters the family lacks come from
-  whichever family comes next in alias order. Within that family the weight
-  is matched, so the run stays weight-coherent but mixes families. That is
-  expected under CSS cluster matching (§5.3).
-
-The user's recollection most likely comes from the variable-font case
-(semibold → Bold), from a split family, or from a renderer's per-character
-fallback. The harness carries all three, so a regression in any of them
-shows up.
+  the next font in the sorted list. That sort has the same
+  family-agnostic tail, so the case above applies per character.
 
 ### 3.3 Condensed requests
 
@@ -397,8 +440,8 @@ Helvetica -> Nimbus Sans, Arial -> Liberation Sans, Courier New -> Liberation Mo
   synthesize). Not a bug.
 * With the build's default `--prefix=/usr/local`, the relative
   `<include>conf.d</include>` in `/etc/fonts/fonts.conf` resolves against
-  `/usr/local/etc/fonts` and silently loads nothing. The harness sets
-  `FONTCONFIG_PATH=/etc/fonts` for that reason. Without it, the built
+  `/usr/local/etc/fonts` and silently loads nothing. That is why the
+  harness writes its own `fonts.conf` with an absolute include. Without it, the built
   library answers `sans-serif:lang=ja` with JP. That is the clearest
   evidence that the KR result comes from config.
 
@@ -423,10 +466,28 @@ that test `lang`:
 * for no language: keep one neutral default.
 
 `fc-genconf` already emits exactly this shape (`src/fcconffile.c:69-78`).
-Prototype run with two such rules: `sans-serif:lang=ja` → JP,
-`sans-serif:lang=zh-cn` → SC, `DejaVu Sans:lang=ja` unchanged (strong family
-still wins). Each generic needs its own block, because the generic slot
-(10) gates a sans rule out of `serif:lang=ja`.
+Prototype on this machine (21 `<alias><family>sans-serif|serif|monospace</family>
+<test name="lang" compare="contains">…</test><prefer>…</prefer></alias>` blocks):
+
+* **Placed after the existing `<alias>` blocks, with the unconditional KR
+  lines kept: no effect.** KR still wins every CJK language, because KR's
+  prepend lands earlier in the family list.
+* **Placed *before* the first existing `<alias>`, KR lines kept as the
+  neutral default: works.**
+  * `sans-serif:lang=ja` → JP, `zh-cn` → SC, `zh-tw` → TC, `zh-hk` → HK,
+    `ko` → KR;
+  * `serif:lang=ja` → Noto Serif CJK JP;
+  * `monospace:lang=ja` → Noto Sans Mono CJK JP;
+  * `:lang=ja` → JP;
+  * `sans-serif:lang=ja:weight=bold` → JP Bold;
+  * `DejaVu Sans:lang=ja` stays DejaVu Sans (strong family still wins);
+  * plain `sans-serif` is unchanged.
+* **The unconditional KR lines removed instead: works too.** But then no
+  CJK face is preferred for requests without a language.
+
+So the patch is "insert conditioned aliases ahead, keep KR as the
+fallback". Each generic needs its own block, because the generic slot (10)
+gates a sans rule out of `serif:lang=ja`.
 *Spec:* CSS Fonts 4 §2.1.5 (a generic family "may be a composite face
 combining different typefaces based on … the content language") and §5.2
 step 2 ("User agents may choose the generic font family to use based on the
@@ -434,17 +495,31 @@ language of the containing element"). Picking a font per language for a
 generic is the UA's job, so config is the right layer. Nothing in these
 fonts' OpenType data could make the choice.
 
-### P2. Don't let a font with an empty langset win on genericfamily. Size: ~3 lines C. Risk: low.
+### P2. Stop icon fonts winning on genericfamily. Size: 3–6 lines of data, or a 1-line priority move. Risk: low (data) / medium (move).
 
-In the genericfamily block of the scanner (`fcfreetype.c:2088-2137`, and its
-Fontations twin in `names.rs:170`), skip the curated classification when the
-face's langset is empty. Icon and music fonts then become
-`FC_FAMILY_UNKNOWN`. The alternative is to drop FontAwesome/Bravura/Leland
-from `fantasy.txt`, which is data only, but leaves the hole open for the next
-icon font. Fixes Impact → FontAwesome.
-*Spec:* CSS Fonts 4 §5.3 (cluster matching): a face is only used for
-characters it supports. A face that supports no language's text cannot stand
-in for a text family.
+* **Data form (recommended):** remove FontAwesome, FontAwesome 7 *,
+  Material Icons, Foundation Icons, mnmlicons, CaladingsCLM, Bravura and
+  Leland from `fc-genericfamily/fantasy.txt`. These are pictograph or
+  music-notation fonts, not fantasy *text* faces. They fall back to
+  `FC_FAMILY_UNKNOWN`. This fixes Impact → FontAwesome and touches nothing
+  else.
+* **Rejected form:** "a face with an empty langset gets no generic". I
+  measured it: 85 installed faces have an empty langset. Most are
+  legitimate text fonts for scripts that have no fontconfig orthography
+  (Noto Sans Javanese, Sundanese, Tai Tham, Glagolitic, …), and they would
+  lose their sans/serif class. Not small, not safe.
+* **Structural form:** move `PRI1 (LANG)` above `PRI1 (GENERIC_FAMILY)`
+  (`fcmatch.c:370-372`). A face that cannot write the requested language
+  then never beats one that can, whatever its class. The risk is real: with
+  `lang=ja`, a `monospace` request could get a proportional CJK face when
+  no monospaced face covers Japanese. On this machine Noto Sans Mono CJK
+  exists, so the harness would not show it. Needs a synthetic-font test
+  first.
+
+*Spec:* CSS Fonts 4 §5 (steps 5–6). If the matched face has no glyph for
+the character, the next family is tried, so a face is used only for
+characters it can render. A pictograph font is never a stand-in for a text
+family.
 
 ### P3. Classify the request's family with the curated table. Size: ~15 lines C. Risk: low.
 
@@ -482,6 +557,28 @@ shows exactly which ones.
 *Spec:* CSS Fonts 4 §5.2 steps 4.1–4.3. OpenType OS/2 usWeightClass and
 usWidthClass (the scale the comparison should run in; usWidthClass 1–9 =
 50–200 %).
+
+### P4b. Choose the family before the style when config names none. Size: ~40 lines C in fcmatch.c. Risk: medium.
+
+This fixes the §3.2 cross-family cases (`lang=nqo:bold` → NKo Unjoined,
+`lang=ban:bold` → a sans instead of the serif, `lang=ur:light` → Kufi). In
+`FcFontSetMatchInternal`, when the best score's family slots (9 and 13) are
+both 1e99, the request named no family the winner carries. In that case:
+
+1. Find the winner with slots 19–22 (style, slant, weight, width) zeroed.
+   That picks the family the same way a regular-weight request would.
+2. Run the full comparison again over the faces that share that face's
+   first family name.
+
+`FcFontSort` needs the same treatment for its tail. Sorting by the
+family-rank key before the style slots would do. There is no API change.
+It changes results only where config is silent, which is exactly where
+results are arbitrary today.
+*Spec:* CSS Fonts 4 §5 step 1 (start from a family) and §5.2 step 4 (match
+width, style and weight among *that family's* faces). The cheaper,
+config-only alternative is to list the script fonts in `65-nonlatin.conf`
+(as P1 does for CJK). That puts them in slot 13 and makes the family rank
+decide.
 
 ### P5. Variable fonts: let the axis win over a mismatching named instance. Size: ~20 lines C. Risk: medium-high.
 
@@ -530,27 +627,61 @@ the font's audience. So this is a convention (Adobe/Google/Microsoft CJK
 fonts follow it), not a rule. Use P1 for CJK, and P6 when fonts ship
 `meta`.
 
-**Suggested order:** P1 (fixes the complaint), P2 + P3 (small, clearly
-right), then P4 behind the harness. P5 and P6 are design work.
+**Not proposed: anything based on STAT.** Only 5 installed faces have a
+`STAT` table. What STAT says about the styles in a family (axis values,
+elidable names, style linking) already reaches fontconfig through fvar
+named instances and name IDs 16/17/21/22. STAT's job is naming and
+presenting styles in UIs (the spec: it "describes design attributes that
+distinguish font-style variants within a font family"). It does not say
+which face suits a request better than the numbers fontconfig already
+compares. It becomes relevant when fontconfig is asked to *name* an
+arbitrary instance of a variable font, not to rank faces.
+
+**Suggested order:**
+
+1. P1, which fixes the complaint.
+2. P2 (data form) and P3: small and clearly right.
+3. P4 and P4b, behind the harness.
+4. P5 and P6, which are design work.
 
 ---
 
 ## 5. Test harness
 
 ```
-test/typical/requests.txt   the requests, tagged by case
-test/typical/run.sh         runs them; pins FONTCONFIG_FILE/PATH, FC_LANG=en, LC_ALL
-test/typical/baseline.txt   results of the unpatched build on this machine
-                            (system fc-match 2.18.4 gives identical results)
+test/typical/requests.txt   the requests, tagged by case ([cjk], [weight], [lang-weight], …)
+test/typical/run.sh         runs them and prints one result block per request
+test/typical/baseline.txt   results of the unpatched tree on this machine
 ```
 
 ```
 meson setup $TMPDIR/typ-build ~/Projects/typical && ninja -C $TMPDIR/typ-build
 ~/Projects/typical/test/typical/run.sh -o $TMPDIR/after.txt
 diff -u ~/Projects/typical/test/typical/baseline.txt $TMPDIR/after.txt
-~/Projects/typical/test/typical/run.sh -s        # same requests via the system fc-match
 ```
 
-The baseline's first line records the face count and a hash of the font
-set, so a diff against a different font install shows up as such instead of
-as a matching change.
+By default `run.sh` sets up a private environment, so that every kind of
+patch shows up in the diff:
+
+* **Config patches show.** The set of enabled `conf.d` files is the system's
+  (`/etc/fonts/conf.d`). Every file that also exists in the tree's
+  `conf.d/` is taken from the tree, so a patch to
+  `conf.d/65-nonlatin.conf` changes the results.
+* **Scanner patches show.** The cache is private and is rebuilt from
+  scratch with the built `fc-cache` on every run (about 9 s here). A patch
+  to `fcfreetype.c` or `fc-fontations` therefore changes the results too.
+  The system caches are never read.
+* **The locale is pinned:** `FC_LANG=en`, `LC_ALL=C.UTF-8`.
+
+Options:
+
+* `-S` uses the system's own `conf.d` files instead of the tree's.
+* `-s` uses the system `fc-match` with the system config and caches, for
+  comparison with the desktop.
+
+On this machine all three modes give identical results for every request
+in the list.
+
+The header records the face count and a hash of the font set, so a diff
+against a different font install shows up as such, not as a matching
+change.

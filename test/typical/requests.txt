@@ -82,3 +82,13 @@ match Segoe UI
 match Roboto
 match Inter
 match xyzzy
+
+# [lang-weight] languages no alias list mentions: the weight picks the family.
+match sans-serif:lang=nqo
+match sans-serif:lang=nqo:weight=bold
+match :lang=ban
+match :lang=ban:weight=bold
+match serif:lang=he
+match serif:lang=he:weight=black
+match :lang=ur:weight=light
+match :lang=ks:weight=light

@@ -1,5 +1,5 @@
 # typical baseline: 853 faces, font-set sha256 59f4e385fedb0999
-# fc-match: /tmp/claude-1000/typ-build/fc-match/fc-match
+# mode: built library, system conf.d set with tree conf.d files, fresh cache
 match sans-serif:lang=ja
     Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
 match sans-serif:lang=ko
@@ -147,3 +147,19 @@ match Inter
     Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
 match xyzzy
     Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match sans-serif:lang=nqo
+    Noto Sans NKo | Regular | weight=80 width=100 slant=0 | NotoSansNKo-Regular.ttf#0
+match sans-serif:lang=nqo:weight=bold
+    Noto Sans NKo Unjoined | Bold | weight=200 width=100 slant=0 | NotoSansNKoUnjoined-Bold.ttf#0
+match :lang=ban
+    Noto Serif Balinese | Regular | weight=80 width=100 slant=0 | NotoSerifBalinese-Regular.ttf#0
+match :lang=ban:weight=bold
+    Noto Sans Balinese | Bold | weight=200 width=100 slant=0 | NotoSansBalinese-Bold.ttf#0
+match serif:lang=he
+    Liberation Serif | Regular | weight=80 width=100 slant=0 | LiberationSerif-Regular.ttf#0
+match serif:lang=he:weight=black
+    Noto Serif Hebrew | Black | weight=210 width=100 slant=0 | NotoSerifHebrew-Black.ttf#0
+match :lang=ur:weight=light
+    Noto Kufi Arabic | Light | weight=50 width=100 slant=0 | NotoKufiArabic-Light.ttf#0
+match :lang=ks:weight=light
+    Noto Kufi Arabic | Light | weight=50 width=100 slant=0 | NotoKufiArabic-Light.ttf#0
