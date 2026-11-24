@@ -1,0 +1,30 @@
+{
+    "fonts": [
+        { "family": "Plain", "lang": ["ur", "fa"], "fontversion": 3, "file": "/path/to/Plain.ttf" },
+        { "family": "Urdu", "lang": ["ur", "fa"], "designlang": ["ur-Arab", "ks-Arab"], "supportedlang": "fa-Arab", "fontversion": 1, "file": "/path/to/Urdu.ttf" },
+        { "family": "HanS", "lang": ["zh-cn", "zh-tw"], "designlang": "Hans", "fontversion": 1, "file": "/path/to/HanS.ttf" },
+        { "family": "HanT", "lang": ["zh-cn", "zh-tw"], "designlang": "Hant", "fontversion": 1, "file": "/path/to/HanT.ttf" }
+    ],
+    "tests": [
+        {
+            "method": "match",
+            "query": { "lang": "ur" },
+            "result": { "family": "Urdu" }
+        },
+        {
+            "method": "match",
+            "query": { "lang": "fa" },
+            "result": { "family": "Plain" }
+        },
+        {
+            "method": "match",
+            "query": { "lang": "zh-cn" },
+            "result": { "family": "HanS" }
+        },
+        {
+            "method": "match",
+            "query": { "lang": "zh-tw" },
+            "result": { "family": "HanT" }
+        }
+    ]
+}

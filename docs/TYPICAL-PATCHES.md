@@ -251,3 +251,68 @@ conflicts.
 
 Then 9 requests were added under `[designlang]` (ug, ar, fa, sd, tr, pl,
 ee, se), with a baseline taken *before* P6, so P6's own diff is readable.
+
+## P6: rank by design language (`meta` dlng) inside the LANG slot (src/fcmatch.c)
+
+Size: +185 lines in `fcmatch.c`. Most of it is the tag matcher: subtag
+comparison and a 7-entry table of Han/Kana/Hangul script tags. Also a new
+test, `test/test-designlang.json`, with 4 cases. Without the patch, the
+`ur` and `zh-tw` cases fail.
+
+How it ranks:
+
+* `FcCompare` now adds an offset to the LANG score of every font that
+  covers the requested language:
+  * 0 when the font's `designlang` names that language;
+  * 30 otherwise, including fonts that have no `designlang`.
+* The offset stays below 100, the step between two requested languages, so
+  it only orders fonts that already tie on coverage. A missing object
+  counts as unknown, never as a penalty. TYPICAL-SCAN.md requires that.
+
+How tags are matched:
+
+* A ScriptLangTag matches when the primary language subtags agree and the
+  region subtags agree where both have one. If the tag has a script
+  subtag, it must be one of the language's scripts (checked only for the
+  CJK languages, where the table knows them).
+* A script-only tag (`Hans`, `Hant`, `Jpan`, `Kore`, …) matches only
+  through that table, so `Hans` serves `zh-cn`/`zh-sg` and `Hant` serves
+  `zh-tw`/`zh-hk`/`zh-mo`. Other script-only tags (`Dupl`, `sunu`, `latn`)
+  match nothing. Without CLDR's likely-script data, a script-only `latn`
+  would otherwise outrank every font for every Latin language.
+
+Spec: OpenType `meta`. `dlng` "Indicates languages and/or scripts for the
+user audiences that the font was primarily designed for." That is a
+statement about intent, beyond coverage.
+
+**Not used: `slng` and `locl`.** The brief offered them as lower tiers. I
+built all three tiers and swept them, and both lower tiers are unclean.
+The sweep (338 languages × 4 generics × 5 weights) moved 255 requests with
+the three tiers. With dlng alone it moves 5.
+
+* `slng` ("declared to be capable of supporting") sent `:lang=ar` and
+  `:lang=fa` to Noto Nastaliq Urdu, which declares `slng ar-Arab, fa-Arab`.
+  Nastaliq is not the script style Arabic or Persian readers expect. slng
+  restates coverage, and ranking it above fonts without a `meta` table
+  amounts to penalizing absence.
+* `locl` sent `:lang=tr`, `pl`, `vi`, `kk`, `bg`, `bs` and others to
+  Adwaita Mono, a monospace face that carries locl for them. It sent the
+  Sami languages to DejaVu, `sd` to Noto Kufi Arabic, and `:lang=ee` to
+  Noto Sans *Italic*: the Italic face has a locl system the upright one
+  lacks. Whether a font has locl for a language says little about whether
+  the font is right for it.
+
+Moved results:
+
+| request | before | after | why |
+|---|---|---|---|
+| :lang=ug | DejaVu Sans Book | Noto Nastaliq Urdu Regular | Its dlng lists `ug-Arab`; DejaVu has no `meta`. |
+
+The sweep's other 4 moves are the same request at light, semibold, bold
+and black. `sans-serif:lang=ug` stays DejaVu Sans, because Nastaliq is not
+classified sans-serif and the generic slot decides first.
+
+**Note for Joop:** the font's data drives this. Noto Nastaliq Urdu claims
+Uyghur as a design language. Uyghur is usually set in a Naskh-style face,
+so if that claim is wrong, it is a data problem in Noto, not a matcher
+problem. The harness shows it if Noto changes its `meta`.

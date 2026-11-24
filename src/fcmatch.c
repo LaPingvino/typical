@@ -770,6 +770,188 @@ FcCompareGenericFamilyBackfill (FcValueListPtr query, /* pattern genericfamily *
 }
 
 /*
+ * Design language inside the LANG slot.  The OpenType 'meta' table's
+ * 'dlng' lists "languages and/or scripts for the user audiences that the
+ * font was primarily designed for".  Among fonts that cover the requested
+ * language equally, one whose dlng names it ranks first.  A font without
+ * dlng (no 'meta' table, a non-SFNT font, an older cache) is "unknown" and
+ * ranks with every other covering font: absence is never a penalty.
+ *
+ * 'slng' ("declared to be capable of supporting") and 'locl' language
+ * systems are deliberately not used: both restate coverage, and ranking
+ * them above fonts that simply lack the table moved Arabic and Persian to
+ * Noto Nastaliq Urdu (slng ar, fa) and Turkish, Polish and others to a
+ * monospace face that happens to carry locl for them.
+ *
+ * The offset stays below 100, the step between two requested languages in
+ * FcCompareValueList, so it only orders fonts that already tie on coverage.
+ */
+#define FC_LANG_TIER_DESIGN  0.0
+#define FC_LANG_TIER_COVERED 30.0
+
+/* Compare the first @n bytes of two subtags, ignoring ASCII case. */
+static int
+FcLangSubtagCmp (const FcChar8 *a, const FcChar8 *b, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++) {
+	FcChar8 ca = FcToLower (a[i]), cb = FcToLower (b[i]);
+
+	if (ca != cb)
+	    return ca < cb ? -1 : 1;
+	if (!ca)
+	    break;
+    }
+    return 0;
+}
+
+/* Script subtags for the languages whose script is not implied by
+ * fontconfig's language name alone (ScriptLangTags may be script-only). */
+static const struct {
+    const char *lang;
+    const char *scripts; /* space separated, lower case */
+} fcLangScripts[] = {
+    { "ja",    "jpan hani hira kana" },
+    { "ko",    "kore hang hani" },
+    { "zh-cn", "hans hani" },
+    { "zh-sg", "hans hani" },
+    { "zh-tw", "hant hani" },
+    { "zh-hk", "hant hani" },
+    { "zh-mo", "hant hani" },
+};
+
+static FcBool
+FcLangHasScript (const FcChar8 *lang, const FcChar8 *script, int len)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof (fcLangScripts) / sizeof (fcLangScripts[0]); i++) {
+	const char *p;
+
+	if (FcStrCmpIgnoreCase (lang, (const FcChar8 *)fcLangScripts[i].lang) != 0)
+	    continue;
+	for (p = fcLangScripts[i].scripts; *p; p += (p[4] ? 5 : 4))
+	    if (!FcLangSubtagCmp ((const FcChar8 *)p, script, len) && len == 4)
+		return FcTrue;
+    }
+    return FcFalse;
+}
+
+/*
+ * Does the ScriptLangTag @tag (e.g. "ur-Arab", "as-Beng", "Hans", "zh-TW")
+ * name the fontconfig language @lang (e.g. "ur", "zh-tw")?  The primary
+ * language subtags must agree; a region in both must agree; a script in
+ * the tag must be one @lang is written in, when we know it.  A script-only
+ * tag matches only through the table above.
+ */
+static FcBool
+FcLangMatchesTag (const FcChar8 *lang, const FcChar8 *tag)
+{
+    const FcChar8 *sub, *lsub;
+    int            n, ln;
+
+    for (n = 0; tag[n] && tag[n] != '-'; n++)
+	;
+    if (n == 4 && !tag[n]) /* script-only */
+	return FcLangHasScript (lang, tag, 4);
+    for (ln = 0; lang[ln] && lang[ln] != '-'; ln++)
+	;
+    if (n != ln || FcLangSubtagCmp (tag, lang, n) != 0)
+	return FcFalse;
+    lsub = lang[ln] ? lang + ln + 1 : NULL;
+    for (sub = tag[n] ? tag + n + 1 : NULL; sub; ) {
+	int m;
+
+	for (m = 0; sub[m] && sub[m] != '-'; m++)
+	    ;
+	if (m == 4) {
+	    /* script subtag: reject only when we know the language's
+	     * scripts and this is not one of them */
+	    FcBool known = FcFalse;
+	    size_t i;
+
+	    for (i = 0; i < sizeof (fcLangScripts) / sizeof (fcLangScripts[0]); i++)
+		if (!FcStrCmpIgnoreCase (lang, (const FcChar8 *)fcLangScripts[i].lang))
+		    known = FcTrue;
+	    if (known && !FcLangHasScript (lang, sub, 4))
+		return FcFalse;
+	} else if (m == 2 || m == 3) {
+	    /* region subtag */
+	    if (lsub && (FcLangSubtagCmp (sub, lsub, m) != 0 || (lsub[m] && lsub[m] != '-')))
+		return FcFalse;
+	}
+	sub = sub[m] ? sub + m + 1 : NULL;
+    }
+    return FcTrue;
+}
+
+static FcBool
+FcFontLangObjectMatches (FcPattern *fnt, FcObject object, FcStrSet *langs)
+{
+    FcPatternElt  *e = FcPatternObjectFindElt (fnt, object);
+    FcValueListPtr l;
+    int            i;
+
+    if (!e)
+	return FcFalse;
+    for (l = FcPatternEltValues (e); l; l = FcValueListNext (l)) {
+	FcValue v = FcValueCanonicalize (&l->value);
+
+	if (v.type != FcTypeString)
+	    continue;
+	for (i = 0; i < langs->num; i++)
+	    if (FcLangMatchesTag (langs->strs[i], v.u.s))
+		return FcTrue;
+    }
+    return FcFalse;
+}
+
+/* The offset to add to a font's LANG score (see the comment above). */
+static double
+FcCompareLangTier (FcPattern *pat, FcPattern *fnt, double langscore)
+{
+    FcPatternElt  *pe = FcPatternObjectFindElt (pat, FC_LANG_OBJECT);
+    FcPatternElt  *fe = FcPatternObjectFindElt (fnt, FC_LANG_OBJECT);
+    FcValueListPtr l;
+    FcStrSet      *langs = NULL;
+    double         tier = FC_LANG_TIER_COVERED;
+    int            j;
+
+    if (!pe || !fe || langscore >= 2000)
+	return 0;
+    if (!FcPatternObjectFindElt (fnt, FC_DESIGN_LANG_OBJECT))
+	return tier;
+
+    /* Find the requested language that produced the LANG score, with the
+     * same formula as FcCompareValueList. */
+    for (l = FcPatternEltValues (pe), j = 0; l && !langs; l = FcValueListNext (l), j++) {
+	FcValue        v = FcValueCanonicalize (&l->value);
+	FcValueListPtr fl;
+	int            k;
+
+	for (fl = FcPatternEltValues (fe), k = 0; fl; fl = FcValueListNext (fl), k++) {
+	    FcValue fv = FcValueCanonicalize (&fl->value), best;
+	    double  c = FcCompareLang (&v, &fv, &best);
+
+	    if (c < 0 || c * 1000 + j * 100 + (fv.type == FcTypeString ? k : 0) != langscore)
+		continue;
+	    if (v.type == FcTypeLangSet)
+		langs = FcLangSetGetLangs (v.u.l);
+	    else if (v.type == FcTypeString && (langs = FcStrSetCreate()))
+		FcStrSetAdd (langs, v.u.s);
+	    break;
+	}
+    }
+    if (!langs)
+	return tier;
+    if (FcFontLangObjectMatches (fnt, FC_DESIGN_LANG_OBJECT, langs))
+	tier = FC_LANG_TIER_DESIGN;
+    FcStrSetDestroy (langs);
+    return tier;
+}
+
+/*
  * Return a value indicating the distance between the two lists of
  * values
  */
@@ -816,6 +998,9 @@ FcCompare (FcPattern     *pat,
 	    i2++;
 	}
     }
+
+    /* Design-language tiers inside the LANG slot (see above). */
+    value[PRI_LANG] += FcCompareLangTier (pat, fnt, value[PRI_LANG]);
 
     /*
      * genericfamily is derivable from the family name, so reconstruct it
