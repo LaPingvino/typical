@@ -189,3 +189,24 @@ After the patch, no request in the sweep changes family with weight.
 Not done: FcFontSort, the fallback list. Its tail still orders families
 that config does not list by style first. The sort would need a family-rank
 key ahead of the style slots, which is a bigger change. Left for later.
+
+## P5: not done (variable fonts and the `variable=False` default)
+
+This was not attempted, because it would not stay clean.
+
+`FcDefaultSubstitute` adds `variable=False` to every request
+(`fcdefault.c:43`). That is the contract that keeps variable faces away
+from clients that cannot apply `fontvariations`. Letting the variable
+Cantarell face win `weight=semibold` (it covers 600 exactly, but today
+loses to the Bold named instance) would need two things:
+
+* telling a defaulted `variable` apart from one the client set, which means
+  changing the binding of a default the API has always added as strong;
+* trusting every client to honour `fontvariations`.
+
+A client that ignores `fontvariations` would draw the variable face's
+default instance. For Cantarell that is Regular, which is worse than Bold.
+The harness keeps `Cantarell:weight=semibold` (Bold today) and the
+`variable=true` variant (wght=600) as the before/after for anyone who
+designs this properly. A per-client opt-in (the client sets `variable=true`
+or DontCare) already gives the exact weight today.
