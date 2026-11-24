@@ -93,3 +93,61 @@ Moved results:
 Unchanged as intended: Futura, Helvetica Neue, Roboto and Inter stay on
 Noto Sans, and Georgia, Garamond and Cambria stay on Noto Serif (same
 class as before). Consolas and SF Mono were already monospace.
+
+## P4: directional weight and width matching in OpenType units, width first (src/fcmatch.c, src/fcobjs.h)
+
+Size: +115 lines in `fcmatch.c` (two comparators, a helper, and one
+priority-order move) and 2 changed lines in `fcobjs.h`. Also a new test,
+`test/test-css-weight-width.json`, with 4 cases. The old library fails 3 of
+them.
+
+What changes:
+
+* `FcCompareWeight` and `FcCompareWidth` replace `FcCompareRange` for
+  WEIGHT and WIDTH. A face whose value or range contains the request still
+  scores 0, and the value passed on (for variable fonts) is computed
+  exactly as before. Only the ordering of misses changes. The new order
+  follows CSS Fonts 4 §5.2 step 4.3 for weight:
+  * below 400: lighter first, descending, then heavier;
+  * 400–500: heavier up to 500, then lighter, then heavier above 500;
+  * above 500: heavier first, then lighter.
+  Width follows step 4.1: at or below 100 %, narrower first, otherwise
+  wider first.
+* Weight is compared in OpenType units (`FcWeightToOpenTypeDouble`), not
+  on fontconfig's non-linear scale. Which rule applies is decided by the
+  nearest OpenType weight class (a multiple of 100, ties to the lighter
+  one). That way fontconfig's in-between constants keep their meaning:
+  `book` (380) searches like regular, and `demilight` (350) searches like
+  light.
+  * Without this rounding, `DejaVu Sans:weight=book` went to ExtraLight,
+    even though DejaVu's regular face is *named* Book, and 83 `book`
+    requests moved. With it, none move.
+* In the priority order, WIDTH moves ahead of SLANT and WEIGHT. CSS
+  §5.2 step 4: "font-width is tried first", then font-style, then
+  font-weight. STYLE (an explicit style string) stays first.
+
+Moved results in the harness:
+
+| request | before | after | why |
+|---|---|---|---|
+| Noto Sans:weight=extralight | Light (300) | Thin (100) | CSS: below 400, lighter first. |
+| sans-serif:weight=extralight | Noto Sans Light | Noto Sans Thin | same |
+| DejaVu Sans:width=condensed:weight=light | ExtraLight, normal width | Condensed (Book), 87 % | Width is tried before weight. |
+| Noto Sans Sinhala:width=condensed | Regular, normal width | Thin Condensed, 63 % | Width first. Among the condensed faces, 400 has nothing at 400–500, so lighter comes next: Thin. |
+
+Wider check: all 277 installed families × {thin, extralight, light,
+demilight, book, regular, medium, semibold, bold, extrabold, black,
+condensed, semiexpanded} (3,601 requests), old library against new.
+82 moved, all of the kinds above:
+
+| requests | move | rule |
+|---|---|---|
+| 68 × `weight=extralight` | Light → Thin | below 400, lighter first |
+| 4 × `weight=extralight` | Regular → Thin | the family has only Thin, Regular and heavier, so lighter first |
+| 4 × `weight=light` (Noto Sans Oriya, Syriac ×3) | Regular → Thin | same rule; these families have no Light |
+| 4 × `weight=demilight` (same families) | Regular → Thin | demilight searches like light |
+| 1 × `SourceCodeVF:weight=extrabold` | Bold → Black | above 500, heavier first |
+| 1 × `Noto Sans Sinhala:width=condensed` | Regular → Thin Condensed | width first (as in the harness) |
+
+The Light → Thin moves for families with only Thin and Regular are what
+CSS specifies. They are listed so they can be judged, not hidden.

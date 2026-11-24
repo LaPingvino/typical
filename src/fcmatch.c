@@ -259,6 +259,119 @@ FcCompareRange (const FcValue *v1, const FcValue *v2, FcValue *bestValue)
 	return 0.0;
 }
 
+static FcBool
+FcValueGetSpan (const FcValue *v, double *b, double *e)
+{
+    FcValue c = FcValueCanonicalize (v);
+
+    switch ((int)c.type) {
+    case FcTypeInteger:
+	*b = *e = c.u.i;
+	return FcTrue;
+    case FcTypeDouble:
+	*b = *e = c.u.d;
+	return FcTrue;
+    case FcTypeRange:
+	*b = c.u.r->begin;
+	*e = c.u.r->end;
+	return FcTrue;
+    }
+    return FcFalse;
+}
+
+/*
+ * Directional search keys from CSS Fonts 4, section 5.2 ("Matching font
+ * styles"), step 4.  A face whose value or range contains the desired value
+ * scores 0.  Otherwise the faces are tried in the order the spec gives,
+ * nearest first within each group, and each later group is offset by
+ * FC_CSS_GROUP so that it never beats an earlier one.
+ */
+#define FC_CSS_GROUP 10000.0
+
+static double
+FcFaceDistanceBelow (double want, double b, double e)
+{
+    (void)b;
+    return want - e; /* e < want: lighter/narrower, descending */
+}
+
+static double
+FcFaceDistanceAbove (double want, double b, double e)
+{
+    (void)e;
+    return b - want; /* b > want: heavier/wider, ascending */
+}
+
+static double
+FcCompareWeight (const FcValue *v1, const FcValue *v2, FcValue *bestValue)
+{
+    double r, b1, e1, b2, e2, want, lo, hi, cls;
+
+    /* Same overlap test and same best value (used for variable fonts) as
+     * a plain range comparison; only the ordering of misses differs. */
+    r = FcCompareRange (v1, v2, bestValue);
+    if (r <= 0)
+	return r;
+    if (!FcValueGetSpan (v1, &b1, &e1) || !FcValueGetSpan (v2, &b2, &e2))
+	return r;
+
+    /* Compare in OpenType units (100..900), where the CSS thresholds
+     * 400 and 500 live; fontconfig's own weight scale is not linear in
+     * them. */
+    want = FcWeightToOpenTypeDouble (FC_MIN (FC_MAX ((b1 + e1) * .5, 0), FC_WEIGHT_EXTRABLACK));
+    lo = FcWeightToOpenTypeDouble (FC_MIN (FC_MAX (b2, 0), FC_WEIGHT_EXTRABLACK));
+    hi = FcWeightToOpenTypeDouble (FC_MIN (FC_MAX (e2, 0), FC_WEIGHT_EXTRABLACK));
+    if (want < 0 || lo < 0 || hi < 0)
+	return r;
+
+    /* Pick the CSS rule by the nearest OpenType weight class (multiples
+     * of 100, ties to the lighter one).  fontconfig's in-between
+     * constants then follow their class: book (380) is searched like
+     * regular, demilight (350) like light.  The distances below still use
+     * the exact value. */
+    cls = ceil (want / 100. - .5) * 100.;
+
+    if (cls < 400) {
+	if (hi < want)
+	    return FcFaceDistanceBelow (want, lo, hi);
+	return FC_CSS_GROUP + FcFaceDistanceAbove (want, lo, hi);
+    } else if (cls <= 500) {
+	if (lo > want && lo <= 500)
+	    return FcFaceDistanceAbove (want, lo, hi);
+	if (hi < want)
+	    return FC_CSS_GROUP + FcFaceDistanceBelow (want, lo, hi);
+	return 2 * FC_CSS_GROUP + FcFaceDistanceAbove (want, lo, hi);
+    } else {
+	if (lo > want)
+	    return FcFaceDistanceAbove (want, lo, hi);
+	return FC_CSS_GROUP + FcFaceDistanceBelow (want, lo, hi);
+    }
+}
+
+static double
+FcCompareWidth (const FcValue *v1, const FcValue *v2, FcValue *bestValue)
+{
+    double r, b1, e1, b2, e2, want;
+
+    r = FcCompareRange (v1, v2, bestValue);
+    if (r <= 0)
+	return r;
+    if (!FcValueGetSpan (v1, &b1, &e1) || !FcValueGetSpan (v2, &b2, &e2))
+	return r;
+
+    /* fontconfig widths are already percentages of normal, as in CSS. */
+    want = (b1 + e1) * .5;
+    if (want <= FC_WIDTH_NORMAL) {
+	if (e2 < want)
+	    return FcFaceDistanceBelow (want, b2, e2);
+	return FC_CSS_GROUP + FcFaceDistanceAbove (want, b2, e2);
+    } else {
+	if (b2 > want)
+	    return FcFaceDistanceAbove (want, b2, e2);
+	return FC_CSS_GROUP + FcFaceDistanceBelow (want, b2, e2);
+    }
+}
+
 static double
 FcCompareSize (const FcValue *v1, const FcValue *v2, FcValue *bestValue)
 {
@@ -338,6 +451,8 @@ FcCompareFilename (const FcValue *v1, const FcValue *v2, FcValue *bestValue)
 #define PRI_FcCompareLang(n)       PRI1 (n)
 #define PRI_FcComparePostScript(n) PRI1 (n)
 #define PRI_FcCompareRange(n)      PRI1 (n)
+#define PRI_FcCompareWeight(n)     PRI1 (n)
+#define PRI_FcCompareWidth(n)      PRI1 (n)
 #define PRI_FcCompareSize(n)       PRI1 (n)
 
 #define FC_OBJECT(NAME, Type, Cmp) PRI_##Cmp (NAME)
@@ -377,9 +492,9 @@ typedef enum _FcMatcherPriority {
     PRI1 (SIZE),
     PRI1 (PIXEL_SIZE),
     PRI1 (STYLE),
+    PRI1 (WIDTH), /* CSS Fonts 4 5.2 step 4: width, then style, then weight */
     PRI1 (SLANT),
     PRI1 (WEIGHT),
-    PRI1 (WIDTH),
     PRI1 (FONT_HAS_HINT),
     PRI1 (DECORATIVE),
     PRI1 (ANTIALIAS),

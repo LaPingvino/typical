@@ -1,0 +1,32 @@
+{
+    "fonts": [
+        { "family": "Css", "style": "Thin", "weight": 0, "width": 100, "file": "/path/to/Css-Thin.ttf" },
+        { "family": "Css", "style": "Light", "weight": 50, "width": 100, "file": "/path/to/Css-Light.ttf" },
+        { "family": "Css", "style": "Regular", "weight": 80, "width": 100, "file": "/path/to/Css-Regular.ttf" },
+        { "family": "Css", "style": "Bold", "weight": 200, "width": 100, "file": "/path/to/Css-Bold.ttf" },
+        { "family": "Css", "style": "Black", "weight": 210, "width": 100, "file": "/path/to/Css-Black.ttf" },
+        { "family": "Css", "style": "Condensed", "weight": 80, "width": 75, "file": "/path/to/Css-Condensed.ttf" }
+    ],
+    "tests": [
+        {
+            "method": "match",
+            "query": { "family": "Css", "weight": 40 },
+            "result": { "family": "Css", "file": "/path/to/Css-Thin.ttf" }
+        },
+        {
+            "method": "match",
+            "query": { "family": "Css", "weight": 75 },
+            "result": { "family": "Css", "file": "/path/to/Css-Regular.ttf" }
+        },
+        {
+            "method": "match",
+            "query": { "family": "Css", "weight": 205 },
+            "result": { "family": "Css", "file": "/path/to/Css-Black.ttf" }
+        },
+        {
+            "method": "match",
+            "query": { "family": "Css", "weight": 50, "width": 75 },
+            "result": { "family": "Css", "file": "/path/to/Css-Condensed.ttf" }
+        }
+    ]
+}
