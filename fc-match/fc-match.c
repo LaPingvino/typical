@@ -66,6 +66,7 @@ static const struct option longopts[] = {
     { "all",     0, 0, 'a' },
     { "verbose", 0, 0, 'v' },
     { "brief",   0, 0, 'b' },
+    { "explain", 0, 0, 'e' },
     { "format",  1, 0, 'f' },
     { "version", 0, 0, 'V' },
     { "help",    0, 0, 'h' },
@@ -83,10 +84,10 @@ usage (char *program, int error)
 {
     FILE *file = error ? stderr : stdout;
 #if HAVE_GETOPT_LONG
-    fprintf (file, _("usage: %s [-savbVh] [-f FORMAT] [--sort] [--all] [--verbose] [--brief] [--format=FORMAT] [--version] [--help] [pattern] {element...}\n"),
+    fprintf (file, _("usage: %s [-savbeVh] [-f FORMAT] [--sort] [--all] [--verbose] [--brief] [--explain] [--format=FORMAT] [--version] [--help] [pattern] {element...}\n"),
                      program);
 #else
-    fprintf (file, _("usage: %s [-savVh] [-f FORMAT] [pattern] {element...}\n"),
+    fprintf (file, _("usage: %s [-savbeVh] [-f FORMAT] [pattern] {element...}\n"),
                      program);
 #endif
     fprintf (file, _("List best font matching [pattern]\n"));
@@ -96,6 +97,7 @@ usage (char *program, int error)
     fprintf (file, _("  -a, --all            display unpruned sorted list of matches\n"));
     fprintf (file, _("  -v, --verbose        display entire font pattern verbosely\n"));
     fprintf (file, _("  -b, --brief          display entire font pattern briefly\n"));
+    fprintf (file, _("  -e, --explain        explain the match: config changes and scores per slot\n"));
     fprintf (file, _("  -f, --format=FORMAT  use the given output format\n"));
     fprintf (file, _("  -V, --version        display font config version and exit\n"));
     fprintf (file, _("  -h, --help           display this help and exit\n"));
@@ -104,6 +106,7 @@ usage (char *program, int error)
     fprintf (file, _("  -a         (all)     display unpruned sorted list of matches\n"));
     fprintf (file, _("  -v         (verbose) display entire font pattern verbosely\n"));
     fprintf (file, _("  -b         (brief)   display entire font pattern briefly\n"));
+    fprintf (file, _("  -e         (explain) explain the match: config changes and scores per slot\n"));
     fprintf (file, _("  -f FORMAT  (format)  use the given output format\n"));
     fprintf (file, _("  -V         (version) display font config version and exit\n"));
     fprintf (file, _("  -h         (help)    display this help and exit\n"));
@@ -116,7 +119,7 @@ main (int argc, char **argv)
 {
     int            verbose = 0;
     int            brief = 0;
-    int            sort = 0, all = 0;
+    int            sort = 0, all = 0, explain = 0;
     const FcChar8 *format = NULL;
     FcChar8       *format_optarg = NULL;
     int            i, err = 0;
@@ -129,9 +132,9 @@ main (int argc, char **argv)
 
     setlocale (LC_ALL, "");
 #  if HAVE_GETOPT_LONG
-    while ((c = getopt_long (argc, argv, "asvbf:Vh", longopts, NULL)) != -1)
+    while ((c = getopt_long (argc, argv, "asvbef:Vh", longopts, NULL)) != -1)
 #  else
-    while ((c = getopt (argc, argv, "asvbf:Vh")) != -1)
+    while ((c = getopt (argc, argv, "asvbef:Vh")) != -1)
 #  endif
     {
 	switch (c) {
@@ -146,6 +149,9 @@ main (int argc, char **argv)
 	    break;
 	case 'b':
 	    brief = 1;
+	    break;
+	case 'e':
+	    explain = 1;
 	    break;
 	case 'f':
 	    format_optarg = FcStrCopy ((const FcChar8 *)optarg);
@@ -165,6 +171,25 @@ main (int argc, char **argv)
 #else
     i = 1;
 #endif
+
+    if (explain) {
+	/* The explanation is printed by the library's FC_DBG_EXPLAIN debug
+	 * hook, which reads FC_DEBUG once, at its first use: set it before
+	 * any other fontconfig call. */
+	char        buf[32];
+	const char *e = getenv ("FC_DEBUG");
+
+	if (sort || all) {
+	    fprintf (stderr, _("--explain explains a single match; it cannot be combined with --sort or --all\n"));
+	    return 1;
+	}
+	snprintf (buf, sizeof (buf), "%d", (e ? atoi (e) : 0) | 8192 /* FC_DBG_EXPLAIN */);
+#ifdef _WIN32
+	_putenv_s ("FC_DEBUG", buf);
+#else
+	setenv ("FC_DEBUG", buf, 1);
+#endif
+    }
 
     if (argv[i]) {
 	pat = FcNameParse ((FcChar8 *)argv[i]);

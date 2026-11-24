@@ -1997,6 +1997,41 @@ FcConfigPatternCanon (FcPattern *p,
 	FcPatternObjectDel (p, object);
 }
 
+/* FC_DBG_EXPLAIN: name the rule that changed the request: its file and
+ * its tests. */
+static void
+FcConfigExplainRule (const FcRuleSet *rs, const FcRule *r)
+{
+    const char *sep = " when ";
+
+    printf ("%s:", rs->name ? (const char *)rs->name : "(unnamed rule set)");
+    for (; r; r = r->next) {
+	if (r->type != FcRuleTest)
+	    continue;
+	printf ("%s%s%s ", sep, r->u.test->kind == FcMatchFont ? "font " : "",
+	        FcObjectName (r->u.test->object));
+	FcOpPrint (r->u.test->op);
+	switch (r->u.test->expr ? FC_OP_GET_OP (r->u.test->expr->op) : FcOpNil) {
+	case FcOpNil: /* these print a newline of their own */
+	    printf (" nil");
+	    break;
+	case FcOpCharSet:
+	    printf (" (a charset)");
+	    break;
+	case FcOpLangSet:
+	    printf (" (a langset)");
+	    break;
+	default:
+	    printf (" ");
+	    FcExprPrint (r->u.test->expr);
+	}
+	sep = ", ";
+    }
+    if (*sep == ' ')
+	printf (" always");
+    printf ("\n");
+}
+
 FcBool
 FcConfigSubstituteWithPat (FcConfig   *config,
                            FcPattern  *p,
@@ -2018,6 +2053,10 @@ FcConfigSubstituteWithPat (FcConfig   *config,
     FcTest       **tst = NULL;
     FamilyTable    data;
     FamilyTable   *table = &data;
+    FcBool         explain = kind == FcMatchPattern && (FcDebug() & FC_DBG_EXPLAIN);
+    FcPattern     *before = NULL;
+    FcRule        *r0;
+    FcBool         r0_shown;
 
     if (kind < FcMatchKindBegin || kind >= FcMatchKindEnd)
 	return FcFalse;
@@ -2027,6 +2066,10 @@ FcConfigSubstituteWithPat (FcConfig   *config,
 	return FcFalse;
 
     s = config->subst[kind];
+    if (explain) {
+	printf ("== Config substitution: each change to the request, by file and rule ==\n");
+	before = FcPatternDuplicate (p);
+    }
     if (kind == FcMatchPattern) {
 	/* Classify the requested family with the same curated data the
 	 * scanner applies to fonts, so a request for an absent family
@@ -2101,6 +2144,14 @@ FcConfigSubstituteWithPat (FcConfig   *config,
 		FcPatternObjectAddString (p, FC_PRGNAME_OBJECT, prgname);
 	}
     }
+    if (before) {
+	if (FcPatternPrintDelta (before, p, FcFalse)) {
+	    printf ("built in (generic class of the requested family; default languages from FC_LANG or the locale):\n");
+	    FcPatternPrintDelta (before, p, FcTrue);
+	}
+	FcPatternDestroy (before);
+	before = NULL;
+    }
 
     nobjs = FC_MAX_BASE_OBJECT + config->maxObjects + 2;
     value = (FcValueList **)malloc (SIZEOF_VOID_P * nobjs);
@@ -2139,6 +2190,8 @@ FcConfigSubstituteWithPat (FcConfig   *config,
 	FcPtrListIterInit (rs->subst[kind], &iter2);
 	for (; FcPtrListIterIsValid (rs->subst[kind], &iter2); FcPtrListIterNext (rs->subst[kind], &iter2)) {
 	    r = (FcRule *)FcPtrListIterGetValue (rs->subst[kind], &iter2);
+	    r0 = r;
+	    r0_shown = FcFalse;
 	    for (i = 0; i < nobjs; i++) {
 		elt[i] = NULL;
 		value[i] = NULL;
@@ -2212,6 +2265,8 @@ FcConfigSubstituteWithPat (FcConfig   *config,
 			FcEditPrint (r->u.edit);
 			printf ("\n\n");
 		    }
+		    if (explain)
+			before = FcPatternDuplicate (p);
 		    /*
 		     * Evaluate the list of expressions
 		     */
@@ -2297,6 +2352,17 @@ FcConfigSubstituteWithPat (FcConfig   *config,
 		     * any properties without data
 		     */
 		    FcConfigPatternCanon (p, r->u.edit->object);
+
+		    if (before) {
+			if (FcPatternPrintDelta (before, p, FcFalse)) {
+			    if (!r0_shown)
+				FcConfigExplainRule (rs, r0);
+			    r0_shown = FcTrue;
+			    FcPatternPrintDelta (before, p, FcTrue);
+			}
+			FcPatternDestroy (before);
+			before = NULL;
+		    }
 
 		    if (FcDebug() & FC_DBG_EDIT) {
 			printf ("FcConfigSubstitute edit");

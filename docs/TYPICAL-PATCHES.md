@@ -316,3 +316,50 @@ classified sans-serif and the generic slot decides first.
 Uyghur as a design language. Uyghur is usually set in a Naskh-style face,
 so if that claim is wrong, it is a data problem in Noto, not a matcher
 problem. The harness shows it if Noto changes its `meta`.
+
+## fc-match --explain (src/fcmatch.c, fccfg.c, fcdefault.c, fcdbg.c, fc-match)
+
+No matching change: the harness result file is identical before and after.
+
+`fc-match --explain PATTERN` (`-e`) prints, in this order:
+
+1. **Config substitution.** Every change to the request, with the config
+   file and the rule's tests, and the values added (`+`) or removed (`-`).
+   Changes made before any rule are shown first: the default languages and
+   the curated generic class (P3).
+2. **Default substitution.** What `FcDefaultSubstitute` filled in.
+3. **The request** as it goes into matching.
+4. **Candidates.** The winner, the next face of its own family, and the
+   best face of each of the next four families. For each runner-up:
+   the slot where it lost, with the two values compared, in words. For
+   example: `lang: both cover ja; designlang: winner designed for ja, this
+   face has no design-language data (score 0 vs 30)`. When the
+   family-first rule (P4b) overrode a better raw score, that is what it
+   says instead.
+5. **A table of the score per slot**, in priority order. Rows where every
+   candidate scores 0 are left out, and `*` marks the slot where each
+   candidate lost.
+
+How it works:
+
+* It is a debug bit, `FC_DBG_EXPLAIN` (8192). `fc-match` ORs the bit into
+  `FC_DEBUG` before its first library call, so the library prints
+  `FC_DEBUG=…` on stderr as it does for every debug bit.
+* The scores come from `FcCompare` itself, called once per font after the
+  real match. The winner is the one `FcFontSetMatchInternal` chose. No
+  second matcher is involved.
+* The design-language offset (P6) is read back out of the LANG score. It
+  is the remainder below 100.
+* It explains `FcFontMatch` only, so it cannot be combined with `-s` or
+  `-a`.
+
+Test: `test/test_explain.py`, with three test fonts. Scan rules give them
+family names, languages and `designlang`, and an alias prefers the "KR"
+face for sans-serif. The test checks the config trace line, the `lang`
+loss explained for both runners-up, and the table rows.
+
+Found with it: the harness's requests are written `sans-serif:…`.
+`FcNameParse` reads the `-` as the start of a size list, so the request's
+strong family is `"sans"`, not `"sans-serif"`. `48-guessfamily.conf` then
+adds sans-serif, so the results are the same either way. The family-name
+form that keeps the hyphen is `:family=sans-serif`.

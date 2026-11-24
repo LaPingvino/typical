@@ -1202,6 +1202,370 @@ FcFontRenderPrepare (FcConfig  *config,
     return newp;
 }
 
+/*
+ * FC_DBG_EXPLAIN (fc-match --explain): say why the winner won.  Every font
+ * is scored with FcCompare, exactly as above; the winner and the best face
+ * of each of the next few families are listed with their score per slot,
+ * and each runner-up is shown the slot where it lost, with the two values
+ * compared.
+ */
+#define FC_EXPLAIN_RUNNERS_UP 4
+
+/* The object scored in @slot (FC_INVALID_OBJECT if none). */
+static FcObject
+FcExplainSlotObject (int slot)
+{
+    size_t o;
+
+    for (o = 1; o < sizeof (_FcMatchers) / sizeof (_FcMatchers[0]); o++)
+	if (_FcMatchers[o].compare && (_FcMatchers[o].strong == slot || _FcMatchers[o].weak == slot))
+	    return _FcMatchers[o].object;
+    return FC_INVALID_OBJECT;
+}
+
+static const char *
+FcExplainSlotName (int slot)
+{
+    FcObject object;
+
+    switch (slot) {
+    case PRI_FAMILY_STRONG: return "family (strong)";
+    case PRI_FAMILY_WEAK: return "family (weak)";
+    case PRI_POSTSCRIPT_NAME_STRONG: return "postscriptname (strong)";
+    case PRI_POSTSCRIPT_NAME_WEAK: return "postscriptname (weak)";
+    }
+    object = FcExplainSlotObject (slot);
+    return object != FC_INVALID_OBJECT ? FcObjectName (object) : "?";
+}
+
+static void
+FcExplainValues (FcPattern *pat, FcObject object)
+{
+    FcPatternElt *e = FcPatternObjectFindElt (pat, object);
+
+    if (e)
+	FcValueListPrint (FcPatternEltValues (e));
+    else
+	printf (" (none)");
+}
+
+/* Print the @n'th value of @pat's @object as plain text. */
+static void
+FcExplainNth (FcPattern *pat, FcObject object, int n)
+{
+    FcPatternElt  *e = FcPatternObjectFindElt (pat, object);
+    FcValueListPtr l;
+
+    for (l = e ? FcPatternEltValues (e) : NULL; l && n > 0; l = FcValueListNext (l))
+	n--;
+    if (!l) {
+	printf ("?");
+	return;
+    }
+    {
+	FcValue v = FcValueCanonicalize (&l->value);
+
+	if (v.type == FcTypeString)
+	    printf ("%s", v.u.s);
+	else if (v.type == FcTypeLangSet) {
+	    FcStrSet  *langs = FcLangSetGetLangs (v.u.l);
+	    FcStrList *sl = langs ? FcStrListCreate (langs) : NULL;
+	    FcChar8   *s;
+	    const char *sep = "";
+
+	    while (sl && (s = FcStrListNext (sl))) {
+		printf ("%s%s", sep, s);
+		sep = "/";
+	    }
+	    if (sl)
+		FcStrListDone (sl);
+	    if (langs)
+		FcStrSetDestroy (langs);
+	} else
+	    FcValuePrint (v);
+    }
+}
+
+static const char *
+FcExplainGenericName (int g)
+{
+    static const char *names[] = {
+	"unknown", "serif", "sans-serif", "monospace", "cursive", "fantasy",
+	"system-ui", "ui-serif", "ui-sans-serif", "ui-monospace", "ui-rounded",
+	"emoji", "math", "fangsong"
+    };
+
+    return g >= 0 && g < (int)(sizeof (names) / sizeof (names[0])) ? names[g] : "?";
+}
+
+static void
+FcExplainGeneric (FcPattern *pat)
+{
+    FcPatternElt  *e = FcPatternObjectFindElt (pat, FC_GENERIC_FAMILY_OBJECT);
+    FcValueListPtr l;
+    const char    *sep = "";
+
+    if (!e) {
+	printf ("unclassified");
+	return;
+    }
+    for (l = FcPatternEltValues (e); l; l = FcValueListNext (l)) {
+	FcValue v = FcValueCanonicalize (&l->value);
+
+	printf ("%s%s", sep, v.type == FcTypeInteger ? FcExplainGenericName (v.u.i) : "?");
+	sep = "/";
+    }
+}
+
+/* LANG = coverage * 1000 + request position * 100 + design-language tier */
+static void
+FcExplainLangSide (FcPattern *pat, double v, FcBool plural)
+{
+    int cov = (int)(v / 1000), j = ((int)v % 1000) / 100;
+
+    if (cov >= 2) {
+	printf ("%s not cover any requested language", plural ? "do" : "does");
+	return;
+    }
+    printf ("%s ", plural ? "cover" : "covers");
+    FcExplainNth (pat, FC_LANG_OBJECT, j);
+    if (cov == 1)
+	printf (" (another territory)");
+    if (j > 0)
+	printf (" (requested language #%d)", j + 1);
+}
+
+static void
+FcExplainLang (FcPattern *pat, FcPattern *win, double wv, FcPattern *fnt, double fv)
+{
+    double wtier = wv - (double)((long)wv / 100 * 100), ftier = fv - (double)((long)fv / 100 * 100);
+
+    if (wv - wtier == fv - ftier) {
+	printf ("both ");
+	FcExplainLangSide (pat, wv, FcTrue);
+	printf ("; designlang: ");
+	if (wtier < ftier) {
+	    printf ("winner designed for ");
+	    FcExplainNth (pat, FC_LANG_OBJECT, ((int)wv % 1000) / 100);
+	    printf (", this face %s", FcPatternObjectFindElt (fnt, FC_DESIGN_LANG_OBJECT) ? "not" : "has no design-language data");
+	} else
+	    printf ("this face designed for it, the winner not");
+	(void)win;
+	return;
+    }
+    printf ("winner ");
+    FcExplainLangSide (pat, wv, FcFalse);
+    printf ("; this face ");
+    FcExplainLangSide (pat, fv, FcFalse);
+}
+
+static void
+FcExplainFamily (FcPattern *pat, double v)
+{
+    if (v >= 1e99)
+	printf ("not in the list");
+    else {
+	printf ("\"");
+	FcExplainNth (pat, FC_FAMILY_OBJECT, (int)v);
+	printf ("\" at position %d", (int)v + 1);
+    }
+}
+
+/* Why @fnt lost to @win at @slot. */
+static void
+FcExplainSlot (FcPattern *pat, int slot, FcPattern *win, double wv, FcPattern *fnt, double fv)
+{
+    FcObject object;
+
+    printf ("%s: ", FcExplainSlotName (slot));
+    switch (slot) {
+    case PRI_FAMILY_STRONG:
+    case PRI_FAMILY_WEAK:
+	printf ("%s names in the request's family list: winner ", slot == PRI_FAMILY_STRONG ? "strong" : "weak");
+	FcExplainFamily (pat, wv);
+	printf (", this face ");
+	FcExplainFamily (pat, fv);
+	break;
+    case PRI_GENERIC_FAMILY:
+	printf ("request wants ");
+	FcExplainGeneric (pat);
+	printf (", winner is ");
+	FcExplainGeneric (win);
+	printf (", this face ");
+	FcExplainGeneric (fnt);
+	break;
+    case PRI_LANG:
+	FcExplainLang (pat, win, wv, fnt, fv);
+	break;
+    default:
+	object = FcExplainSlotObject (slot);
+	if (object == FC_INVALID_OBJECT)
+	    break;
+	printf ("request");
+	FcExplainValues (pat, object);
+	printf (", winner");
+	FcExplainValues (win, object);
+	printf (", this face");
+	FcExplainValues (fnt, object);
+	break;
+    }
+    printf (" (score %g vs %g)\n", wv, fv);
+}
+
+typedef struct {
+    FcPattern     *font;
+    const FcChar8 *family;
+    double         score[PRI_END];
+} FcExplainEntry;
+
+static int
+FcExplainScoreCmp (const double *a, const double *b)
+{
+    int i;
+
+    for (i = 0; i < PRI_END; i++)
+	if (a[i] != b[i])
+	    return a[i] < b[i] ? -1 : 1;
+    return 0;
+}
+
+static int
+FcExplainEntryCmp (const void *a, const void *b)
+{
+    return FcExplainScoreCmp (((const FcExplainEntry *)a)->score, ((const FcExplainEntry *)b)->score);
+}
+
+static void
+FcExplainMatch (FcFontSet    **sets,
+                int            nsets,
+                FcPattern     *p,
+                FcPattern     *best,
+                const FcChar8 *famfirst,
+                FcCompareData *data)
+{
+    FcExplainEntry *e = NULL, *t;
+    int             n = 0, size = 0, set, f, i, k, nshow, own;
+    FcResult        result;
+    int             lost[2 + FC_EXPLAIN_RUNNERS_UP];
+
+    printf ("== Request after config and default substitution ==\n");
+    FcPatternPrint (p);
+
+    /* Entry 0 is the winner; then the best face of every other family. */
+    for (set = 0; set < nsets; set++) {
+	if (!sets[set])
+	    continue;
+	for (f = 0; f < sets[set]->nfont; f++) {
+	    FcPattern *font = sets[set]->fonts[f];
+	    FcChar8   *fam = NULL;
+	    double     score[PRI_END];
+
+	    if (!FcCompare (p, font, score, &result, data))
+		goto bail;
+	    if (FcPatternObjectGetString (font, FC_FAMILY_OBJECT, 0, &fam) != FcResultMatch)
+		fam = (FcChar8 *)"(no family)";
+	    if (n == 0) {
+		t = realloc (e, (size = 64) * sizeof (*e));
+		if (!t)
+		    goto bail;
+		e = t;
+		e[0].font = NULL;
+		n = 1;
+	    }
+	    if (font == best) {
+		k = 0;
+	    } else {
+		for (k = 1; k < n; k++)
+		    if (!FcStrCmpIgnoreBlanksAndCase (e[k].family, fam))
+			break;
+		if (k < n && FcExplainScoreCmp (score, e[k].score) >= 0)
+		    continue;
+		if (k == n) {
+		    if (n == size) {
+			t = realloc (e, (size *= 2) * sizeof (*e));
+			if (!t)
+			    goto bail;
+			e = t;
+		    }
+		    n++;
+		}
+	    }
+	    e[k].font = font;
+	    e[k].family = fam;
+	    memcpy (e[k].score, score, sizeof (score));
+	}
+    }
+    if (!e || !e[0].font)
+	goto bail;
+    /* The best other face of the winner's own family comes first, then
+     * the other families by score. */
+    for (k = 1, own = 0; k < n; k++)
+	if (!FcStrCmpIgnoreBlanksAndCase (e[k].family, e[0].family)) {
+	    FcExplainEntry tmp = e[1];
+
+	    e[1] = e[k];
+	    e[k] = tmp;
+	    own = 1;
+	    break;
+	}
+    qsort (e + 1 + own, n - 1 - own, sizeof (*e), FcExplainEntryCmp);
+    nshow = FC_MIN (n, 1 + own + FC_EXPLAIN_RUNNERS_UP);
+
+    printf ("== Candidates: the winner%s the best face of each of the next %d families ==\n",
+            own ? ", the next face of its family, and" : " and", nshow - 1 - own);
+    /* Say so only when it mattered: some family scored better overall. */
+    for (k = 1; famfirst && k < n && FcExplainScoreCmp (e[k].score, e[0].score) >= 0; k++)
+	;
+    if (famfirst && k < n)
+	printf ("No requested family matched, so the family came first: %s (the best face with style ignored), then its best face.\n", famfirst);
+    for (k = 0; k < nshow; k++) {
+	FcChar8 *s = FcPatternFormat (e[k].font, (const FcChar8 *)"%{=fcmatch}");
+
+	printf ("#%d %s%s\n", k + 1, s ? (const char *)s : "?", k ? "" : "  [winner]");
+	if (s)
+	    FcStrFree (s);
+	lost[k] = -1;
+	if (!k)
+	    continue;
+	for (i = 0; i < PRI_END && e[k].score[i] == e[0].score[i]; i++)
+	    ;
+	printf ("   lost at ");
+	if (i == PRI_END)
+	    printf ("no slot: tied on every slot, the font order decided\n");
+	else if (e[k].score[i] < e[0].score[i])
+	    printf ("family first: its score is better (from %s on), but it is not in the chosen family %s\n",
+	            FcExplainSlotName (i), famfirst ? (const char *)famfirst : "?");
+	else {
+	    lost[k] = i;
+	    FcExplainSlot (p, i, e[0].font, e[0].score[i], e[k].font, e[k].score[i]);
+	}
+    }
+
+    printf ("== Score per slot, in priority order (lower is better; * marks where that candidate lost) ==\n");
+    printf ("%-24s", "slot");
+    for (k = 0; k < nshow; k++) {
+	char col[8];
+
+	snprintf (col, sizeof (col), "#%d", k + 1);
+	printf (" %10s ", col);
+    }
+    printf ("\n");
+    for (i = 0; i < PRI_END; i++) {
+	for (k = 0; k < nshow && e[k].score[i] == 0; k++)
+	    ;
+	if (k == nshow)
+	    continue;
+	printf ("%-24s", FcExplainSlotName (i));
+	for (k = 0; k < nshow; k++)
+	    printf (" %10g%s", e[k].score[i], lost[k] == i ? "*" : " ");
+	printf ("\n");
+    }
+    printf ("(slots not shown are 0 for every candidate)\n");
+    printf ("== Result ==\n");
+bail:
+    free (e);
+}
+
 static FcPattern *
 FcFontSetMatchInternal (FcFontSet **sets,
                         int         nsets,
@@ -1216,7 +1580,7 @@ FcFontSetMatchInternal (FcFontSet **sets,
     int                 set;
     FcCompareData       data;
     const FcPatternElt *elt;
-    FcChar8            *family;
+    FcChar8            *family, *famfirst = NULL;
 
     for (i = 0; i < PRI_END; i++)
 	bestscore[i] = famscore[i] = 0;
@@ -1317,8 +1681,11 @@ FcFontSetMatchInternal (FcFontSet **sets,
 	}
 	if (FcDebug() & FC_DBG_MATCH)
 	    printf ("No requested family matched; family taken from %s\n", family);
+	famfirst = family;
     }
 
+    if (best && (FcDebug() & FC_DBG_EXPLAIN))
+	FcExplainMatch (sets, nsets, p, best, famfirst, &data);
     FcCompareDataClear (&data);
 
     /* Update the binding according to the score to indicate how exactly values matches on. */

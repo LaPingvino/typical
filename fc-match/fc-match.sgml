@@ -85,10 +85,11 @@ manpage.1: manpage.sgml
     <cmdsynopsis>
       <command>&dhpackage;</command>
 
-      <arg><option>-asvVh</option></arg>
+      <arg><option>-asvbeVh</option></arg>
       <arg><option>--all</option></arg>
       <arg><option>--sort</option></arg>
       <arg><option>--verbose</option></arg>
+      <arg><option>--explain</option></arg>
       <group>
         <arg><option>-f</option> <option><replaceable>format</replaceable></option></arg>
         <arg><option>--format</option> <option><replaceable>format</replaceable></option></arg>
@@ -147,6 +148,14 @@ output is requested.</para>
           <para>Print verbose output of the whole font pattern for each match,
                 or <replaceable>element</replaceable>s if any is
                 provided.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>-e</option>
+          <option>--explain</option>
+        </term>
+        <listitem>
+          <para>Explain the match: each change config and default substitution made to the pattern, with the config file and rule; then the winner and the best face of the next few families, with their score per matching slot in priority order and the slot where each lost, with the two values compared. Not with <option>--sort</option> or <option>--all</option>.</para>
         </listitem>
       </varlistentry>
       <varlistentry>

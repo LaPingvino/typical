@@ -291,8 +291,11 @@ FcConfigSetDefaultSubstitute (FcConfig  *config,
     FcValue       v, namelang, v2;
     int           i;
     double        dpi, size, scale, pixelsize;
+    FcPattern    *before = NULL;
 
     config = FcConfigReference (config);
+    if (FcDebug() & FC_DBG_EXPLAIN)
+	before = FcPatternDuplicate (pattern);
 
     if (!FcPatternFindObjectIter (pattern, &iter, FC_WEIGHT_OBJECT))
 	FcPatternObjectAddInteger (pattern, FC_WEIGHT_OBJECT, FC_WEIGHT_NORMAL);
@@ -390,6 +393,12 @@ FcConfigSetDefaultSubstitute (FcConfig  *config,
 
     if (!FcPatternFindObjectIter (pattern, &iter, FC_ORDER_OBJECT))
 	FcPatternObjectAddInteger (pattern, FC_ORDER_OBJECT, 0);
+
+    if (before) {
+	printf ("== Default substitution (FcDefaultSubstitute): values the request did not set ==\n");
+	FcPatternPrintDelta (before, pattern, FcTrue);
+	FcPatternDestroy (before);
+    }
 
     FcConfigDestroy (config);
 }

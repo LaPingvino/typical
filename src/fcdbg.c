@@ -315,6 +315,92 @@ FcPatternPrint2 (FcPattern         *pp1,
     FcPatternPrint2File (stdout, pp1, pp2, os);
 }
 
+#define FC_DELTA_MAX_SHOWN 8
+
+/* Print the values of @l that have no equal (value and binding) in @other,
+ * each counted once, prefixed by @sign.  Returns how many there were. */
+static int
+FcValueListPrintMissing (FcValueListPtr l, FcValueListPtr other, char sign)
+{
+    FcValueListPtr o;
+    FcBool         used[256];
+    int            n = 0, k;
+
+    memset (used, 0, sizeof (used));
+    for (; l; l = FcValueListNext (l)) {
+	for (o = other, k = 0; o; o = FcValueListNext (o), k++) {
+	    if ((k >= 256 || !used[k]) && o->binding == l->binding &&
+	        FcValueEqual (FcValueCanonicalize (&o->value), FcValueCanonicalize (&l->value))) {
+		if (k < 256)
+		    used[k] = FcTrue;
+		break;
+	    }
+	}
+	if (o)
+	    continue;
+	if (n < FC_DELTA_MAX_SHOWN) {
+	    printf (" %c", sign);
+	    _FcValuePrintFile (stdout, FcValueCanonicalize (&l->value));
+	    FcValueBindingPrintFile (stdout, l);
+	}
+	n++;
+    }
+    if (n > FC_DELTA_MAX_SHOWN)
+	printf (" (%c%d more)", sign, n - FC_DELTA_MAX_SHOWN);
+    return n;
+}
+
+static FcValueListPtr
+FcPatternObjectValues (const FcPattern *p, FcObject object)
+{
+    FcPatternElt *e = FcPatternObjectFindElt (p, object);
+
+    return e ? FcPatternEltValues (e) : NULL;
+}
+
+/*
+ * For FC_DBG_EXPLAIN: print, one line per object, the values @after
+ * gained (+) and lost (-) against @before.  Returns whether anything
+ * changed; with @print false, only that is computed.
+ */
+FcBool
+FcPatternPrintDelta (const FcPattern *before, const FcPattern *after, FcBool print)
+{
+    const FcPattern *pats[2] = { after, before };
+    FcBool           changed = FcFalse;
+    int              i, j;
+
+    for (j = 0; j < 2; j++) {
+	for (i = 0; i < pats[j]->num; i++) {
+	    FcObject       object = FcPatternElts (pats[j])[i].object;
+	    FcValueListPtr a = FcPatternObjectValues (after, object);
+	    FcValueListPtr b = FcPatternObjectValues (before, object);
+	    FcValueListPtr x, y;
+	    int            nadd, ndel;
+
+	    if (j == 1 && a)
+		continue; /* already handled from @after */
+	    /* unchanged lists are skipped without printing */
+	    for (x = a, y = b; x && y; x = FcValueListNext (x), y = FcValueListNext (y))
+		if (x->binding != y->binding ||
+		    !FcValueEqual (FcValueCanonicalize (&x->value), FcValueCanonicalize (&y->value)))
+		    break;
+	    if (!x && !y)
+		continue;
+	    changed = FcTrue;
+	    if (!print)
+		return FcTrue;
+	    printf ("\t%s:", FcObjectName (object));
+	    nadd = FcValueListPrintMissing (a, b, '+');
+	    ndel = FcValueListPrintMissing (b, a, '-');
+	    if (!nadd && !ndel)
+		printf (" (reordered)");
+	    printf ("\n");
+	}
+    }
+    return changed;
+}
+
 void
 FcOpPrintFile (FILE *stream, FcOp op_)
 {
