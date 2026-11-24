@@ -1,0 +1,84 @@
+# typical matching harness: one request per line.
+#   match <pattern>        fc-match <pattern>          (best match)
+#   sort <n> <pattern>     fc-match -s <pattern> | head -n <n>   (fallback list)
+# Lines starting with # are comments.  Keep the case tags (in [brackets]) in
+# step with docs/TYPICAL-MATCHING.md.
+
+# [cjk] Han unification: the face should follow the requested language.
+match sans-serif:lang=ja
+match sans-serif:lang=ko
+match sans-serif:lang=zh-cn
+match sans-serif:lang=zh-tw
+match sans-serif:lang=zh-hk
+match serif:lang=ja
+match monospace:lang=ja
+match :lang=ja
+match sans-serif:lang=ja:weight=bold
+sort 6 sans-serif:lang=ja
+sort 6 sans-serif:lang=zh-cn
+
+# [meta] fonts that declare design languages in 'meta' dlng.
+match sans-serif:lang=ur
+match serif:lang=ur
+match :lang=ur
+match sans-serif:lang=fa
+match sans-serif:lang=bn
+
+# [weight] weight requests, within a family and through generics.
+match Noto Sans:weight=semibold
+match Noto Sans:weight=extralight
+match sans-serif:weight=semibold
+match sans-serif:weight=extralight
+match sans-serif:weight=black
+match serif:weight=semibold
+match monospace:weight=semibold
+match DejaVu Sans:weight=semibold
+match DejaVu Sans:weight=light
+match Liberation Sans:weight=semibold
+match sans-serif:lang=ar:weight=semibold
+match sans-serif:lang=ko:weight=bold
+sort 8 Noto Sans:weight=bold
+
+# [variable] variable fonts: named instance vs. the requested axis value.
+match Cantarell:weight=semibold
+match Cantarell:weight=semibold:variable=true
+match Adwaita Sans:weight=150
+match Adwaita Sans:weight=150:variable=true
+
+# [width] condensed requests.
+match DejaVu Sans:width=condensed
+match DejaVu Sans:width=condensed:weight=light
+match DejaVu Sans:width=condensed:weight=semibold
+match DejaVu Serif:width=condensed:weight=light
+match Noto Sans Sinhala:width=condensed
+match Nimbus Sans:width=condensed
+match Helvetica:width=condensed
+match Helvetica Narrow
+match sans-serif:width=condensed
+
+# [slant]
+match monospace:slant=italic
+match sans-serif:slant=italic:weight=light
+match serif:slant=italic:weight=semibold
+
+# [absent] families that are not installed.
+match Helvetica
+match Helvetica Neue
+match Arial
+match Arial Narrow
+match Times New Roman
+match Courier New
+match Georgia
+match Impact
+match Menlo
+match Monaco
+match SF Mono
+match Consolas
+match Futura
+match Garamond
+match Palatino
+match Comic Sans MS
+match Segoe UI
+match Roboto
+match Inter
+match xyzzy

@@ -1,0 +1,149 @@
+# typical baseline: 853 faces, font-set sha256 59f4e385fedb0999
+# fc-match: /tmp/claude-1000/typ-build/fc-match/fc-match
+match sans-serif:lang=ja
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+match sans-serif:lang=ko
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+match sans-serif:lang=zh-cn
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+match sans-serif:lang=zh-tw
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+match sans-serif:lang=zh-hk
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+match serif:lang=ja
+    Noto Serif CJK KR | Regular | weight=80 width=100 slant=0 | NotoSerifCJK-Regular.ttc#1
+match monospace:lang=ja
+    Noto Sans Mono CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#6
+match :lang=ja
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+match sans-serif:lang=ja:weight=bold
+    Noto Sans CJK KR | Bold | weight=200 width=100 slant=0 | NotoSansCJK-Bold.ttc#1
+sort 6 sans-serif:lang=ja
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+    DejaVu Sans | Bold | weight=200 width=100 slant=0 | DejaVuSans-Bold.ttf#0
+    DejaVu Sans | Oblique | weight=80 width=100 slant=110 | DejaVuSans-Oblique.ttf#0
+    DejaVu Sans | Bold Oblique | weight=200 width=100 slant=110 | DejaVuSans-BoldOblique.ttf#0
+sort 6 sans-serif:lang=zh-cn
+    Noto Sans CJK KR | Regular | weight=80 width=100 slant=0 | NotoSansCJK-Regular.ttc#1
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+    DejaVu Sans | Bold | weight=200 width=100 slant=0 | DejaVuSans-Bold.ttf#0
+    DejaVu Sans | Oblique | weight=80 width=100 slant=110 | DejaVuSans-Oblique.ttf#0
+    DejaVu Sans | Bold Oblique | weight=200 width=100 slant=110 | DejaVuSans-BoldOblique.ttf#0
+match sans-serif:lang=ur
+    Noto Kufi Arabic | Regular | weight=80 width=100 slant=0 | NotoKufiArabic-Regular.ttf#0
+match serif:lang=ur
+    Noto Naskh Arabic | Regular | weight=80 width=100 slant=0 | NotoNaskhArabic-Regular.ttf#0
+match :lang=ur
+    Noto Nastaliq Urdu | Regular | weight=80 width=100 slant=0 | NotoNastaliqUrdu-Regular.ttf#0
+match sans-serif:lang=fa
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+match sans-serif:lang=bn
+    Noto Sans Bengali | Regular | weight=80 width=100 slant=0 | NotoSansBengali-Regular.ttf#0
+match Noto Sans:weight=semibold
+    Noto Sans | Bold | weight=200 width=100 slant=0 | NotoSans-Bold.ttf#0
+match Noto Sans:weight=extralight
+    Noto Sans | Light | weight=50 width=100 slant=0 | NotoSans-Light.ttf#0
+match sans-serif:weight=semibold
+    Noto Sans | Bold | weight=200 width=100 slant=0 | NotoSans-Bold.ttf#0
+match sans-serif:weight=extralight
+    Noto Sans | Light | weight=50 width=100 slant=0 | NotoSans-Light.ttf#0
+match sans-serif:weight=black
+    Noto Sans | Black | weight=210 width=100 slant=0 | NotoSans-Black.ttf#0
+match serif:weight=semibold
+    Noto Serif | Bold | weight=200 width=100 slant=0 | NotoSerif-Bold.ttf#0
+match monospace:weight=semibold
+    Noto Sans Mono | Bold | weight=200 width=100 slant=0 | NotoSansMono-Bold.ttf#0
+match DejaVu Sans:weight=semibold
+    DejaVu Sans | Bold | weight=200 width=100 slant=0 | DejaVuSans-Bold.ttf#0
+match DejaVu Sans:weight=light
+    DejaVu Sans | ExtraLight | weight=40 width=100 slant=0 | DejaVuSans-ExtraLight.ttf#0
+match Liberation Sans:weight=semibold
+    Liberation Sans | Bold | weight=200 width=100 slant=0 | LiberationSans-Bold.ttf#0
+match sans-serif:lang=ar:weight=semibold
+    DejaVu Sans | Bold | weight=200 width=100 slant=0 | DejaVuSans-Bold.ttf#0
+match sans-serif:lang=ko:weight=bold
+    Noto Sans CJK KR | Bold | weight=200 width=100 slant=0 | NotoSansCJK-Bold.ttc#1
+sort 8 Noto Sans:weight=bold
+    Noto Sans | Bold | weight=200 width=100 slant=0 | NotoSans-Bold.ttf#0
+    DejaVu Sans | Bold | weight=200 width=100 slant=0 | DejaVuSans-Bold.ttf#0
+    DejaVu Sans | Book | weight=200 width=100 slant=0 | DejaVuSans.ttf#0
+    DejaVu Sans | Bold Oblique | weight=200 width=100 slant=110 | DejaVuSans-BoldOblique.ttf#0
+    DejaVu Sans | Oblique | weight=200 width=100 slant=110 | DejaVuSans-Oblique.ttf#0
+    Nimbus Sans | Bold | weight=200 width=100 slant=0 | NimbusSans-Bold.otf#0
+    Noto Sans CJK KR | Bold | weight=200 width=100 slant=0 | NotoSansCJK-Bold.ttc#1
+    Noto Sans Bengali | Bold | weight=200 width=100 slant=0 | NotoSansBengali-Bold.ttf#0
+match Cantarell:weight=semibold
+    Cantarell | Bold | weight=200 width=100 slant=0 | Cantarell-VF.otf#262144
+match Cantarell:weight=semibold:variable=true
+    Cantarell |  | weight=180 width=100 slant=0 | Cantarell-VF.otf#0
+match Adwaita Sans:weight=150
+    Adwaita Sans | SemiBold | weight=180 width=100 slant=0 | AdwaitaSans-Regular.ttf#393216
+match Adwaita Sans:weight=150:variable=true
+    Adwaita Sans |  | weight=150 width=100 slant=0 | AdwaitaSans-Regular.ttf#0
+match DejaVu Sans:width=condensed
+    DejaVu Sans | Condensed | weight=80 width=87 slant=0 | DejaVuSansCondensed.ttf#0
+match DejaVu Sans:width=condensed:weight=light
+    DejaVu Sans | ExtraLight | weight=40 width=100 slant=0 | DejaVuSans-ExtraLight.ttf#0
+match DejaVu Sans:width=condensed:weight=semibold
+    DejaVu Sans | Condensed Bold | weight=200 width=87 slant=0 | DejaVuSansCondensed-Bold.ttf#0
+match DejaVu Serif:width=condensed:weight=light
+    DejaVu Serif | Condensed | weight=80 width=87 slant=0 | DejaVuSerifCondensed.ttf#0
+match Noto Sans Sinhala:width=condensed
+    Noto Sans Sinhala | Regular | weight=80 width=100 slant=0 | NotoSansSinhala-Regular.ttf#0
+match Nimbus Sans:width=condensed
+    Nimbus Sans | Regular | weight=80 width=100 slant=0 | NimbusSans-Regular.otf#0
+match Helvetica:width=condensed
+    Nimbus Sans | Regular | weight=80 width=100 slant=0 | NimbusSans-Regular.otf#0
+match Helvetica Narrow
+    Nimbus Sans Narrow | Regular | weight=80 width=87 slant=0 | NimbusSansNarrow-Regular.otf#0
+match sans-serif:width=condensed
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match monospace:slant=italic
+    Noto Sans Mono | Regular | weight=80 width=100 slant=110 | NotoSansMono-Regular.ttf#0
+match sans-serif:slant=italic:weight=light
+    Noto Sans | Light Italic | weight=50 width=100 slant=100 | NotoSans-LightItalic.ttf#0
+match serif:slant=italic:weight=semibold
+    Noto Serif | Bold Italic | weight=200 width=100 slant=100 | NotoSerif-BoldItalic.ttf#0
+match Helvetica
+    Nimbus Sans | Regular | weight=80 width=100 slant=0 | NimbusSans-Regular.otf#0
+match Helvetica Neue
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match Arial
+    Liberation Sans | Regular | weight=80 width=100 slant=0 | LiberationSans-Regular.ttf#0
+match Arial Narrow
+    Nimbus Sans Narrow | Regular | weight=80 width=87 slant=0 | NimbusSansNarrow-Regular.otf#0
+match Times New Roman
+    Liberation Serif | Regular | weight=80 width=100 slant=0 | LiberationSerif-Regular.ttf#0
+match Courier New
+    Liberation Mono | Regular | weight=80 width=100 slant=0 | LiberationMono-Regular.ttf#0
+match Georgia
+    Noto Serif | Regular | weight=80 width=100 slant=0 | NotoSerif-Regular.ttf#0
+match Impact
+    FontAwesome | Regular | weight=80 width=100 slant=0 | fontawesome-regular.ttf#0
+match Menlo
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match Monaco
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match SF Mono
+    Noto Sans Mono | Regular | weight=80 width=100 slant=0 | NotoSansMono-Regular.ttf#0
+match Consolas
+    Noto Sans Mono | Regular | weight=80 width=100 slant=0 | NotoSansMono-Regular.ttf#0
+match Futura
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match Garamond
+    Noto Serif | Regular | weight=80 width=100 slant=0 | NotoSerif-Regular.ttf#0
+match Palatino
+    P052 | Roman | weight=80 width=100 slant=0 | P052-Roman.otf#0
+match Comic Sans MS
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match Segoe UI
+    Adwaita Sans | Regular | weight=80 width=100 slant=0 | AdwaitaSans-Regular.ttf#0
+match Roboto
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match Inter
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match xyzzy
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
