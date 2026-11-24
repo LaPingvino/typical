@@ -153,6 +153,14 @@ fontwrapper     String  The font wrapper format, current values are WOFF, WOFF2,
                         SFNT for any other SFNT font, and CFF for standalone
                         CFF fonts.
 genericfamily   Int     Type of Generic Family
+panose          String  OS/2 PANOSE classification, ten numbers separated
+                        by spaces; absent when all ten are 0
+designlang      String  Languages or scripts the font is designed for, from
+                        the OpenType meta table (dlng); one tag per value
+supportedlang   String  Languages or scripts the font supports, from the
+                        OpenType meta table (slng); one tag per value
+locllang        String  Languages with localized forms: the GSUB/GPOS language
+                        systems carrying a locl feature, as BCP 47 tags
     </programlisting>
   </refsect2>
   <refsect2>

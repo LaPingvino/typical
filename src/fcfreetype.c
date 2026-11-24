@@ -48,6 +48,7 @@
 #include FT_MULTIPLE_MASTERS_H
 
 #include "fcfoundry.h"
+#include "fcotlang.h"
 #include "ftglue.h"
 
 typedef struct {
@@ -500,6 +501,9 @@ FcFontCapabilities (FT_Face face);
 
 static FcBool
 FcFontHasHint (FT_Face face);
+
+static FcBool
+FcFontAddOpenTypeLangs (FcPattern *pat, FT_Face face);
 
 static int
 FcFreeTypeSpacing (FT_Face face);
@@ -1795,6 +1799,23 @@ FcFreeTypeQueryFaceInternal (const FT_Face   face,
     if (!FcPatternObjectAddBool (pat, FC_FONT_HAS_HINT_OBJECT, FcFontHasHint (face)))
 	goto bail1;
 
+    if (os2 && os2->version != 0xffff) {
+	const FT_Byte *p = os2->panose;
+
+	/* An all-zero PANOSE means "any" in every digit: no classification. */
+	if (p[0] | p[1] | p[2] | p[3] | p[4] | p[5] | p[6] | p[7] | p[8] | p[9]) {
+	    char panose[10 * 4];
+
+	    snprintf (panose, sizeof (panose), "%u %u %u %u %u %u %u %u %u %u",
+	              p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9]);
+	    if (!FcPatternObjectAddString (pat, FC_PANOSE_OBJECT, (FcChar8 *)panose))
+		goto bail1;
+	}
+    }
+
+    if (FT_IS_SFNT (face) && !FcFontAddOpenTypeLangs (pat, face))
+	goto bail1;
+
     if (!variable_size && os2 && os2->version >= 0x0005 && os2->version != 0xffff) {
 	double   lower_size, upper_size;
 	FcRange *r;
@@ -2986,6 +3007,225 @@ FcFontHasHint (FT_Face face)
     return FindTable (face, TTAG_fpgm, NULL) ||
            FindTable (face, TTAG_cvt, NULL) ||
            (FindTable (face, TTAG_prep, &size) && size > 7);
+}
+
+/*
+ * Languages a font declares for itself in OpenType data: the 'meta'
+ * table's design (dlng) and supported (slng) languages, and the GSUB and
+ * GPOS language systems that carry a 'locl' feature.
+ */
+
+#define TTAG_meta    FT_MAKE_TAG ('m', 'e', 't', 'a')
+#define TTAG_dlng    FT_MAKE_TAG ('d', 'l', 'n', 'g')
+#define TTAG_slng    FT_MAKE_TAG ('s', 'l', 'n', 'g')
+#define TTAG_locl    FT_MAKE_TAG ('l', 'o', 'c', 'l')
+
+#define FC_OT_U16(p) ((FT_UInt)((p)[0] << 8 | (p)[1]))
+#define FC_OT_U32(p) ((FT_ULong)(p)[0] << 24 | (FT_ULong)(p)[1] << 16 | \
+                      (FT_ULong)(p)[2] << 8 | (FT_ULong)(p)[3])
+
+static FT_Byte *
+FcLoadSfntTable (FT_Face face, FT_ULong tag, FT_ULong *len)
+{
+    FT_Byte *buf;
+
+    *len = 0;
+    if (FT_Load_Sfnt_Table (face, tag, 0, NULL, len) || !*len)
+	return NULL;
+    buf = malloc (*len);
+    if (!buf)
+	return NULL;
+    if (FT_Load_Sfnt_Table (face, tag, 0, buf, len)) {
+	free (buf);
+	return NULL;
+    }
+    return buf;
+}
+
+/* Add each tag of a comma-separated ScriptLangTag list as a string,
+ * skipping malformed ones. */
+static FcBool
+FcAddScriptLangTags (FcPattern *pat, FcObject obj, const FT_Byte *s, FT_ULong len)
+{
+    FT_ULong i = 0;
+
+    while (i < len) {
+	FcChar8  tag[64];
+	FT_ULong n = 0;
+	FcBool   ok = FcTrue;
+
+	while (i < len && (s[i] == ' ' || s[i] == ','))
+	    i++;
+	while (i < len && s[i] != ' ' && s[i] != ',') {
+	    FcChar8 c = s[i++];
+
+	    if (!(FcIsLower (c) || FcIsUpper (c) || FcIsDigit (c) || c == '-') ||
+	        n >= sizeof (tag) - 1)
+		ok = FcFalse;
+	    else
+		tag[n++] = c;
+	}
+	tag[n] = 0;
+	if (ok && n && !FcPatternObjectAddString (pat, obj, tag))
+	    return FcFalse;
+    }
+    return FcTrue;
+}
+
+static FcBool
+FcFontAddMetaLangs (FcPattern *pat, FT_Face face)
+{
+    FT_ULong len, count, i;
+    FT_Byte *meta = FcLoadSfntTable (face, TTAG_meta, &len);
+    FcBool   ret = FcTrue;
+
+    if (!meta)
+	return FcTrue;
+    if (len < 16 || FC_OT_U32 (meta) != 1)
+	goto bail;
+    count = FC_OT_U32 (meta + 12);
+    if (count > (len - 16) / 12)
+	goto bail;
+    for (i = 0; i < count && ret; i++) {
+	const FT_Byte *map = meta + 16 + 12 * i;
+	FT_ULong       tag = FC_OT_U32 (map);
+	FT_ULong       off = FC_OT_U32 (map + 4);
+	FT_ULong       size = FC_OT_U32 (map + 8);
+
+	if (off > len || size > len - off)
+	    continue;
+	if (tag == TTAG_dlng)
+	    ret = FcAddScriptLangTags (pat, FC_DESIGN_LANG_OBJECT, meta + off, size);
+	else if (tag == TTAG_slng)
+	    ret = FcAddScriptLangTags (pat, FC_SUPPORTED_LANG_OBJECT, meta + off, size);
+    }
+bail:
+    free (meta);
+    return ret;
+}
+
+static int
+FcOtLangCompare (const void *key, const void *elt)
+{
+    FcChar32 tag = *(const FcChar32 *)key;
+    FcChar32 etag = ((const FcOtLang *)elt)->tag;
+
+    return tag < etag ? -1 : tag > etag;
+}
+
+/*
+ * Collect, from one GSUB or GPOS table, the tags of the language systems
+ * (not the default one) whose required or listed features include 'locl'.
+ */
+static void
+FcCollectLoclLangSys (FT_Face face, FT_ULong table, FcChar32 *tags, int *ntags, int max)
+{
+    FT_ULong       len, sl, fl, nscripts, nfeat, s, l, f;
+    FT_Byte       *buf = FcLoadSfntTable (face, table, &len);
+    FcBool        *locl = NULL;
+    const FT_Byte *p;
+
+    if (!buf || len < 10 || FC_OT_U16 (buf) != 1)
+	goto bail;
+    sl = FC_OT_U16 (buf + 4);
+    fl = FC_OT_U16 (buf + 6);
+    if (!sl || !fl || sl > len - 2 || fl > len - 2)
+	goto bail;
+
+    nfeat = FC_OT_U16 (buf + fl);
+    if (nfeat > (len - fl - 2) / 6)
+	goto bail;
+    locl = calloc (nfeat + 1, sizeof (FcBool));
+    if (!locl)
+	goto bail;
+    for (f = 0; f < nfeat; f++)
+	locl[f] = FC_OT_U32 (buf + fl + 2 + 6 * f) == TTAG_locl;
+
+    nscripts = FC_OT_U16 (buf + sl);
+    if (nscripts > (len - sl - 2) / 6)
+	goto bail;
+    for (s = 0; s < nscripts; s++) {
+	FT_ULong script = sl + FC_OT_U16 (buf + sl + 2 + 6 * s + 4);
+	FT_ULong nlangsys;
+
+	if (script > len - 4)
+	    continue;
+	nlangsys = FC_OT_U16 (buf + script + 2);
+	if (nlangsys > (len - script - 4) / 6)
+	    continue;
+	for (l = 0; l < nlangsys; l++) {
+	    FcChar32 tag;
+	    FT_ULong langsys, nidx, req;
+	    FcBool   has = FcFalse;
+	    int      i;
+
+	    p = buf + script + 4 + 6 * l;
+	    tag = FC_OT_U32 (p);
+	    langsys = script + FC_OT_U16 (p + 4);
+	    if (langsys > len - 6)
+		continue;
+	    req = FC_OT_U16 (buf + langsys + 2);
+	    nidx = FC_OT_U16 (buf + langsys + 4);
+	    if (nidx > (len - langsys - 6) / 2)
+		continue;
+	    if (req < nfeat && locl[req])
+		has = FcTrue;
+	    for (f = 0; f < nidx && !has; f++) {
+		FT_ULong idx = FC_OT_U16 (buf + langsys + 6 + 2 * f);
+		has = idx < nfeat && locl[idx];
+	    }
+	    if (!has)
+		continue;
+	    for (i = 0; i < *ntags && tags[i] != tag; i++)
+		;
+	    if (i == *ntags && *ntags < max)
+		tags[(*ntags)++] = tag;
+	}
+    }
+bail:
+    free (locl);
+    free (buf);
+}
+
+static int
+FcCompareChar32 (const void *a, const void *b)
+{
+    FcChar32 x = *(const FcChar32 *)a, y = *(const FcChar32 *)b;
+
+    return x < y ? -1 : x > y;
+}
+
+static FcBool
+FcFontAddOpenTypeLangs (FcPattern *pat, FT_Face face)
+{
+    FcChar32    tags[256];
+    const char *added[256];
+    int         ntags = 0, nadded = 0, i, j;
+
+    if (!FcFontAddMetaLangs (pat, face))
+	return FcFalse;
+
+    FcCollectLoclLangSys (face, TTAG_GSUB, tags, &ntags, 256);
+    FcCollectLoclLangSys (face, TTAG_GPOS, tags, &ntags, 256);
+    qsort (tags, ntags, sizeof (tags[0]), FcCompareChar32);
+    for (i = 0; i < ntags; i++) {
+	const FcOtLang *e = bsearch (&tags[i], fcOtLangs,
+	                             sizeof (fcOtLangs) / sizeof (fcOtLangs[0]),
+	                             sizeof (fcOtLangs[0]), FcOtLangCompare);
+	const char     *lang;
+
+	if (!e)
+	    continue; /* not a registered language system tag */
+	lang = e->lang;
+	for (j = 0; j < nadded && strcmp (added[j], lang); j++)
+	    ;
+	if (j < nadded)
+	    continue;
+	added[nadded++] = lang;
+	if (!FcPatternObjectAddString (pat, FC_LOCL_LANG_OBJECT, (const FcChar8 *)lang))
+	    return FcFalse;
+    }
+    return FcTrue;
 }
 
 #define __fcfreetype__

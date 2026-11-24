@@ -222,6 +222,14 @@ convenience for the application's rendering mechanism.
     fontwrapper    FC_FONT_WRAPPER        String  The font wrapper format
     genericfamily  FC_GENERIC_FAMILY      Int     Type of Generic Family corresponding
                                                   to FC_FAMILY_* constants
+    panose         FC_PANOSE              String  OS/2 PANOSE classification, ten
+                                                  numbers separated by spaces
+    designlang     FC_DESIGN_LANG         String  Design languages/scripts from the
+                                                  OpenType meta table (dlng)
+    supportedlang  FC_SUPPORTED_LANG      String  Supported languages/scripts from the
+                                                  OpenType meta table (slng)
+    locllang       FC_LOCL_LANG           String  Languages whose GSUB/GPOS language
+                                                  system carries a locl feature
     </programlisting>
   </sect2>
 </sect1>

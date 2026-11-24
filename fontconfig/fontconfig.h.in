@@ -145,6 +145,10 @@ typedef int            FcBool;
 #define FC_NAMED_INSTANCE       "namedinstance"  /* Bool - true if font is named instance */
 #define FC_FONT_WRAPPER         "fontwrapper"    /* String */
 #define FC_GENERIC_FAMILY       "genericfamily"  /* Integer */
+#define FC_PANOSE               "panose"         /* String - OS/2 PANOSE, 10 numbers */
+#define FC_DESIGN_LANG          "designlang"     /* String - meta dlng tags */
+#define FC_SUPPORTED_LANG       "supportedlang"  /* String - meta slng tags */
+#define FC_LOCL_LANG            "locllang"       /* String - langs with OpenType locl */
 
 #define FC_CACHE_SUFFIX         ".cache-" FC_CACHE_VERSION
 #define FC_DIR_CACHE_FILE       "fonts.cache-" FC_CACHE_VERSION

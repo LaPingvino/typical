@@ -78,4 +78,8 @@ FC_OBJECT (DESKTOP_NAME,	FcTypeString,	NULL)
 FC_OBJECT (NAMED_INSTANCE,	FcTypeBool,	FcCompareBool)
 FC_OBJECT (FONT_WRAPPER,	FcTypeString,	FcCompareString)
 FC_OBJECT (GENERIC_FAMILY,	FcTypeInteger,	FcCompareEqual)
+FC_OBJECT (PANOSE,		FcTypeString,	NULL)
+FC_OBJECT (DESIGN_LANG,		FcTypeString,	NULL)
+FC_OBJECT (SUPPORTED_LANG,	FcTypeString,	NULL)
+FC_OBJECT (LOCL_LANG,		FcTypeString,	NULL)
 /* ^-------------- Add new objects here. */
