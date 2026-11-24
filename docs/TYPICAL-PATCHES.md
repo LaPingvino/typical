@@ -90,6 +90,17 @@ Moved results:
 | Monaco | Noto Sans | Noto Sans Mono | same |
 | Comic Sans MS | Noto Sans | Z003 Medium Italic | The config (`45-latin.conf:270`) and the curated list (`cursive.txt`) both say cursive. Before, the "sans" substring rule in `48-guessfamily.conf` set sans-serif first and hid the config's own class. Z003 is the only cursive face installed. |
 
+**Judgement call for Joop: Comic Sans MS → Z003.** Kept for now.
+* The config and the curated list both call Comic Sans cursive.
+* The font's own data agrees: Comic Sans MS carries PANOSE family kind 3
+  ("Latin Hand Written"), not 2 ("Latin Text"). Comic Sans is not installed
+  here, so that value comes from the font as shipped by Microsoft, not from
+  a scan on this machine.
+* The visible result is still a calligraphic Chancery italic, because Z003
+  is the only cursive face installed.
+* Reverting would mean letting the "sans" substring guess win over both
+  sources.
+
 Unchanged as intended: Futura, Helvetica Neue, Roboto and Inter stay on
 Noto Sans, and Georgia, Garamond and Cambria stay on Noto Serif (same
 class as before). Consolas and SF Mono were already monospace.
@@ -149,8 +160,18 @@ condensed, semiexpanded} (3,601 requests), old library against new.
 | 1 × `SourceCodeVF:weight=extrabold` | Bold → Black | above 500, heavier first |
 | 1 × `Noto Sans Sinhala:width=condensed` | Regular → Thin Condensed | width first (as in the harness) |
 
-The Light → Thin moves for families with only Thin and Regular are what
-CSS specifies. They are listed so they can be judged, not hidden.
+**Judgement call for Joop: Light → Thin when a family has no Light.**
+Kept for now.
+* Affected: `weight=light` and `weight=demilight` in Noto Sans Oriya and
+  the three Noto Sans Syriac families. They have Thin, Regular and heavier
+  faces, but no Light.
+* CSS Fonts 4 §5.2 step 4.3 searches lighter weights first below 400, so a
+  300 request takes Thin (100) over Regular (400), although 400 is
+  numerically nearer.
+* Browsers do the same.
+* Reverting means departing from the CSS rule for this one direction,
+  e.g. by preferring the nearest weight when the lighter candidate is
+  further away.
 
 ## P4b: pick the family first when no requested family matched (src/fcmatch.c)
 
@@ -210,3 +231,23 @@ The harness keeps `Cantarell:weight=semibold` (Bold today) and the
 `variable=true` variant (wght=600) as the before/after for anyone who
 designs this properly. A per-client opt-in (the client sets `variable=true`
 or DontCare) already gives the exact weight today.
+
+## Rebased onto typical-scan
+
+The 10 scan commits come first: the `panose`, `designlang`, `supportedlang`
+and `locllang` objects, the OpenType-tag table, and the fontations port.
+The typical series was rebased on top of them, so upstream sees the scan
+side first and the matcher side second. The rebase applied without
+conflicts.
+
+* **Harness:** the rebased tip produced a result file identical to the
+  P4b baseline, byte for byte. Nothing moved, so no baseline commit was
+  needed for the rebase itself.
+* **Cache name:** the scan branch bumps the cache snapshot version
+  (`.cache-13~snap1`). The harness builds a private cache anyway.
+* **Test gate:** it now reads the pytest environment from
+  `meson introspect`.
+* **Results:** meson 31 OK, pytest 79 passed (the scan tests included).
+
+Then 9 requests were added under `[designlang]` (ug, ar, fa, sd, tr, pl,
+ee, se), with a baseline taken *before* P6, so P6's own diff is readable.

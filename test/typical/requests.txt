@@ -92,3 +92,14 @@ match serif:lang=he
 match serif:lang=he:weight=black
 match :lang=ur:weight=light
 match :lang=ks:weight=light
+
+# [designlang] fonts declaring 'meta' dlng/slng, and controls for locl.
+match :lang=ug
+match sans-serif:lang=ug
+match :lang=ar
+match :lang=fa
+match :lang=sd
+match :lang=tr
+match :lang=pl
+match :lang=ee
+match :lang=se

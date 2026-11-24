@@ -163,3 +163,21 @@ match :lang=ur:weight=light
     Noto Nastaliq Urdu | Regular | weight=80 width=100 slant=0 | NotoNastaliqUrdu-Regular.ttf#0
 match :lang=ks:weight=light
     Noto Nastaliq Urdu | Regular | weight=80 width=100 slant=0 | NotoNastaliqUrdu-Regular.ttf#0
+match :lang=ug
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+match sans-serif:lang=ug
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+match :lang=ar
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+match :lang=fa
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+match :lang=sd
+    DejaVu Sans | Book | weight=80 width=100 slant=0 | DejaVuSans.ttf#0
+match :lang=tr
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match :lang=pl
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match :lang=ee
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
+match :lang=se
+    Noto Sans | Regular | weight=80 width=100 slant=0 | NotoSans-Regular.ttf#0
